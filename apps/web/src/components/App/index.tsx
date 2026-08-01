@@ -3,7 +3,7 @@ import { TodoList } from "#components/TodoList";
 import { useTodos } from "#hooks/useTodos";
 
 export function App() {
-  const { todos, loading, actions } = useTodos();
+  const { todos, remaining, loading, actions } = useTodos();
 
   useEffect(() => {
     actions.load();
@@ -13,5 +13,10 @@ export function App() {
     return <p>Loading…</p>;
   }
 
-  return <TodoList todos={todos} onToggle={actions.toggle} />;
+  return (
+    <>
+      <p>{remaining} left</p>
+      <TodoList todos={todos} onToggle={actions.toggle} />
+    </>
+  );
 }

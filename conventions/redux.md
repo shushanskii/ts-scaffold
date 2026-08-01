@@ -8,6 +8,9 @@ portable to any RTK project.
 - **@reduxjs/toolkit** — the store and Immer-backed slices
 - **react-redux** — `Provider`, `useSelector`, `useDispatch`
 - **redux-saga** — all side effects; the thunk middleware is switched off
+- **reselect** — imported as `createSelector` **from `@reduxjs/toolkit`**, which re-exports it.
+  Do not add `reselect` as a direct dependency: a second copy at a different version defeats the
+  memoization it exists for.
 
 ## The flow
 
@@ -38,7 +41,7 @@ src/
 ├── reducers/<entity>/index.ts   # createSlice: state, initialState, generated slice actions
 ├── sagas/<entity>/index.ts      # watchers + workers; the only place slice actions are dispatched
 ├── store/index.ts               # configureStore + saga middleware; exports RootState, AppDispatch
-├── selectors/<entity>/index.ts  # named selectors, typed against RootState
+├── selectors/<entity>/index.ts  # plain reads + memoized derivations, typed against RootState
 ├── hooks/<entity>/index.ts      # selectors in, memoized intent dispatchers out
 └── components/<Name>/index.tsx
 ```
@@ -63,6 +66,11 @@ a saga ever names one, so they stay an implementation detail.
 
 ## Rules
 
+- **Memoize what derives, not what reads.** A selector that returns something already in the store
+  (`state.todos.items`) is a plain function. A selector that filters, maps, sorts, or assembles an
+  object goes through `createSelector` — otherwise it returns a new reference on every render and
+  every `memo`-ed consumer below it re-renders. Compose derived selectors from the plain ones rather
+  than reaching into state twice.
 - **Namespace intent values** — `"todos/load"`, not `"load"`. Redux action types share one global
   space, and a bare verb will trigger another entity's saga.
 - **Declare action shapes with `type`, not `interface`.** Redux's `UnknownAction` carries an index

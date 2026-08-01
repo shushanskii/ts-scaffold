@@ -2,7 +2,7 @@ import type { Todo, TodoStatus } from "@app/shared";
 import { useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { loadTodos, toggleTodo } from "#actions/todos";
-import { selectTodos, selectTodosLoading } from "#selectors/todos";
+import { selectRemainingCount, selectTodos, selectTodosLoading } from "#selectors/todos";
 import type { AppDispatch } from "#store";
 
 interface UseTodosActions {
@@ -12,6 +12,7 @@ interface UseTodosActions {
 
 interface UseTodos {
   readonly todos: readonly Todo[];
+  readonly remaining: number;
   readonly loading: boolean;
   readonly actions: UseTodosActions;
 }
@@ -21,6 +22,7 @@ interface UseTodos {
 export function useTodos(): UseTodos {
   const dispatch = useDispatch<AppDispatch>();
   const todos = useSelector(selectTodos);
+  const remaining = useSelector(selectRemainingCount);
   const loading = useSelector(selectTodosLoading);
 
   // Memoized once so leaf components can be `memo`-ed with stable refs.
@@ -32,5 +34,5 @@ export function useTodos(): UseTodos {
     [dispatch],
   );
 
-  return { todos, loading, actions };
+  return { todos, remaining, loading, actions };
 }
