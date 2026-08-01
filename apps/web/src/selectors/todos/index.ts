@@ -14,6 +14,10 @@ export function selectTodosLoading(state: RootState): boolean {
   return state.todos.loading;
 }
 
+export function selectTodosError(state: RootState): string | undefined {
+  return state.todos.error;
+}
+
 // Derived: `createSelector` recomputes only when `items` changes identity. Without it every
 // render would recompute, and any selector returning a fresh array or object would hand consumers
 // a new reference each time and defeat `memo`.

@@ -1,9 +1,10 @@
 import { useEffect } from "react";
+import { TodoForm } from "#components/TodoForm";
 import { TodoList } from "#components/TodoList";
 import { useTodos } from "#hooks/useTodos";
 
 export function App() {
-  const { todos, remaining, loading, actions } = useTodos();
+  const { todos, remaining, loading, error, actions } = useTodos();
 
   useEffect(() => {
     actions.load();
@@ -15,8 +16,10 @@ export function App() {
 
   return (
     <>
+      <TodoForm onSubmit={actions.create} />
+      {error === undefined ? null : <p role="alert">{error}</p>}
       <p>{remaining} left</p>
-      <TodoList todos={todos} onToggle={actions.toggle} />
+      <TodoList onRemove={actions.remove} onToggle={actions.toggle} todos={todos} />
     </>
   );
 }

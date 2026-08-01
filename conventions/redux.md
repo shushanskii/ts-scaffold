@@ -37,6 +37,7 @@ On top of the layers in `core.md`:
 
 ```
 src/
+├── api/<entity>/index.ts        # HTTP client: fetch in, schema-parsed data out, no Redux
 ├── actions/<entity>/index.ts    # enum of intent types + their creators — hand-written
 ├── reducers/<entity>/index.ts   # createSlice: state, initialState, generated slice actions
 ├── sagas/<entity>/index.ts      # watchers + workers; the only place slice actions are dispatched
@@ -46,10 +47,16 @@ src/
 └── components/<Name>/index.tsx
 ```
 
-Direction: `types → actions → reducers → sagas → store → selectors → hooks → components`.
+Direction: `types → schemas → api → actions → reducers → sagas → store → selectors → hooks →
+components`.
 
 `selectors/` sits after `store/` because it is typed against `RootState`. Keeping selectors out of
 `reducers/` is what lets `store/` import `reducers/` without a cycle.
+
+**A saga therefore cannot use a selector** — it sits before `store/`, and a selector needs
+`RootState`. When a saga needs current state, the intent carries it: the component already has the
+data on screen, so `toggleTodo({ id, status })` costs nothing and keeps the flip logic in the saga.
+Reaching for `select()` with an inline lambda to dodge this is how the layering rots.
 
 ## Where core.md bends
 
@@ -66,6 +73,15 @@ a saga ever names one, so they stay an implementation detail.
 
 ## Rules
 
+- **Name slice reducers `[verb][Entity]`, like any other function** — `setLoading`, `setTodos`,
+  `addTodo`, `replaceTodo`, `removeTodo`. Not past-tense events (`loaded`, `added`): a reducer is a
+  function you call, not a notification. Each does only what its name says — `setTodos` does not
+  also lower a loading flag; the saga puts `setLoading(false)` itself.
+- **Keep three vocabularies apart** for one entity, or identifiers start meaning two things:
+  `actions/` names the user's *intent* (`createTodo`), the slice names the *state change*
+  (`addTodo`), and `api/` is exported as a single object (`todosApi.create`) so its verbs never
+  enter the contest. fallow reports the collision as a duplicate export — heed it rather than
+  aliasing the import.
 - **Memoize what derives, not what reads.** A selector that returns something already in the store
   (`state.todos.items`) is a plain function. A selector that filters, maps, sorts, or assembles an
   object goes through `createSelector` — otherwise it returns a new reference on every render and
@@ -78,7 +94,13 @@ a saga ever names one, so they stay an implementation detail.
   dispatch with a confusing error about a missing index signature.
 - **A slice exports its reducer, its actions, and `initialState` — nothing else.** Assembling them
   is `store/`'s job, so `reducers/` never imports `store/`.
-- **Sagas own every side effect.** `configureStore` runs with `{ thunk: false }`.
+- **Sagas own every side effect.** `configureStore` runs with `{ thunk: false }`. HTTP lives in
+  `api/`, which knows nothing about Redux; the saga calls it through `call` and turns the outcome
+  into a slice action — the success payload or `failed(message)`.
+- **Parse every response through a schema.** The service is a separate process that can be
+  redeployed on its own, so its output is untrusted input until a schema says otherwise.
+- **Store what the server returned**, not what the client hoped for. `toggled` carries the updated
+  todo from the response rather than flipping a local copy.
 - **Hooks return state plus a `useMemo`-ed action object**, so leaf components stay `memo`-able.
 - **Immer's no-op guarantee is a test contract.** A reducer that changes nothing must return the
   identical state object — assert it with `toBe(previous)`.

@@ -1,0 +1,20 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TodoForm > submits the title and clears the input 1`] = `
+<DocumentFragment>
+  <form
+    class="sc-bcHNtg gaKWqh"
+  >
+    <input
+      aria-label="new todo"
+      placeholder="what needs doing?"
+      value=""
+    />
+    <button
+      type="submit"
+    >
+      add
+    </button>
+  </form>
+</DocumentFragment>
+`;

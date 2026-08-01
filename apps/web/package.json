@@ -5,6 +5,7 @@
   "type": "module",
   "imports": {
     "#actions/*": "./src/actions/*/index.ts",
+    "#api/*": "./src/api/*/index.ts",
     "#components/*": "./src/components/*/index.tsx",
     "#hooks/*": "./src/hooks/*/index.ts",
     "#reducers/*": "./src/reducers/*/index.ts",

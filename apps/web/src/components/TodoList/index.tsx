@@ -11,14 +11,15 @@ const List = styled.ul`
 
 interface TodoListProps {
   readonly todos: readonly Todo[];
-  readonly onToggle: (id: string) => void;
+  readonly onToggle: (todo: Todo) => void;
+  readonly onRemove: (todo: Todo) => void;
 }
 
-export const TodoList = memo(function TodoList({ todos, onToggle }: TodoListProps) {
+export const TodoList = memo(function TodoList({ todos, onToggle, onRemove }: TodoListProps) {
   return (
     <List>
       {todos.map((todo) => (
-        <TodoItem key={todo.id} todo={todo} onToggle={onToggle} />
+        <TodoItem key={todo.id} onRemove={onRemove} onToggle={onToggle} todo={todo} />
       ))}
     </List>
   );
