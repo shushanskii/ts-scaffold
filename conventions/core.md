@@ -16,17 +16,44 @@ lives in [`project.md`](./project.md).
 
 ## Monorepo mechanics
 
-- **Workspaces:** `packages/*` (libraries), `examples/*` (demos). Declared in `pnpm-workspace.yaml`.
-- **Shared dependency versions** live once in the pnpm `catalog:` (`pnpm-workspace.yaml`). Packages
-  reference them as `"some-dep": "catalog:"` — never hard-code a version in a package.
+- **Workspaces:** `packages/*` (libraries), `apps/*` (deployables). Declared in
+  `pnpm-workspace.yaml`.
+- **Shared dependency versions** live once in the pnpm `catalog:` (`pnpm-workspace.yaml`). Every
+  package — including the workspace root — references them as `"some-dep": "catalog:"`, never a
+  hard-coded version.
 - **Cross-package imports use the package name**, never a relative path across packages:
-  `import { Todo } from "@scope/core"` — not `../../core/src`.
-- **Intra-package imports use subpath imports** (`#*` → `./src/*/index.ts`, resolving to each
-  entity's `index.ts`), declared in each package's `imports` field:
-  `import { x } from "#reducers/todo"` — not `../../reducers/todo`.
+  `import { Todo } from "@scope/shared"` — not `../../shared/src`.
+- **Intra-package imports use subpath imports**, declared per bucket in the package's `imports`
+  field: `import { x } from "#reducers/todo"` — not `../../reducers/todo`.
+
+  Declare **one entry per bucket**, each resolving to a single concrete extension:
+
+  ```json
+  "imports": {
+    "#components/*": "./src/components/*/index.tsx",
+    "#reducers/*": "./src/reducers/*/index.ts",
+    "#store": "./src/store/index.ts"
+  }
+  ```
+
+  A single catch-all `"#*": "./src/*/index.ts"` cannot serve both `.ts` and `.tsx`, and the array
+  form (`["./src/*/index.ts", "./src/*/index.tsx"]`) is resolved by TypeScript but **not** by Vite —
+  typecheck passes while the dev server and tests fail to resolve. Keep the mapping explicit.
 - **A package's public API is its `exports`.** Only what a package's `exports` (its `src/index.ts`
-  barrel) exposes may be imported by others; internals stay private.
-- Shared runtime deps are **`peerDependencies`** + a catalog `devDependency`, never bundled.
+  barrel) exposes may be imported by others; internals stay private. Apps declare no `exports` —
+  nothing imports them.
+
+### Building
+
+- **`tsc` never emits.** `noEmit: true` lives in `tsconfig.base.json` and stays on everywhere; `tsc`
+  is only ever a typechecker. Emitting is a bundler's job.
+- **Libraries ship source.** `exports` points at `./src/index.ts`; there is no `build` task and no
+  `.d.ts`. Consumers compile it themselves.
+- **Apps bundle to `dist/`.** Because libraries ship raw TypeScript, an app's bundler must pull that
+  source *in* rather than treat it as external — Vite does this by default, `tsup` needs
+  `noExternal: ["@scope/<lib>"]`. A plain `tsc --outDir` build cannot consume a source-only package.
+- Libraries take shared runtime deps as **`peerDependencies`** + a catalog `devDependency`, never
+  bundled. Apps are the final consumer, so they take real `dependencies`.
 
 ## Package internals
 
@@ -59,7 +86,10 @@ is enforced by fallow boundary zones as each package grows.
   fields must be enum members, not raw strings.
 - **All types and enums live in `types/<entity>`**, separate from behaviour.
 - State interfaces are `readonly`; produce new state with spreads, never mutate.
-- Business logic lives in a **pure reducer** (`reducers/`), free of framework imports.
+- Business logic lives in a **reducer** (`reducers/`), never in UI or transport code.
+
+These last three describe hand-written reducers. A state library may satisfy them differently — see
+[`redux.md`](./redux.md) for how Redux Toolkit does, and where it deliberately does not.
 
 ## Testing
 

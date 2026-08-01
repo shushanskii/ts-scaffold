@@ -12,6 +12,7 @@
     "noUncheckedIndexedAccess": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
+    "esModuleInterop": true,
     "skipLibCheck": true,
     "useDefineForClassFields": true,
     "noEmit": true

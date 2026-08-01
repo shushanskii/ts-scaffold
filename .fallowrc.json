@@ -1,15 +1,16 @@
 {
   "$schema": "./node_modules/fallow/schema.json",
+  "entry": ["apps/api/src/main.ts", "apps/web/src/main.tsx"],
   "boundaries": {
     "zones": [
-      { "name": "core", "patterns": ["packages/core/src/**"] },
-      { "name": "react", "patterns": ["packages/react/src/**"] },
-      { "name": "element", "patterns": ["packages/element/src/**"] }
+      { "name": "shared", "patterns": ["packages/shared/src/**"] },
+      { "name": "api", "patterns": ["apps/api/src/**"] },
+      { "name": "web", "patterns": ["apps/web/src/**"] }
     ],
     "rules": [
-      { "from": "core", "allow": ["core"] },
-      { "from": "react", "allow": ["react", "core"] },
-      { "from": "element", "allow": ["element", "react", "core"] }
+      { "from": "shared", "allow": ["shared"] },
+      { "from": "api", "allow": ["api", "shared"] },
+      { "from": "web", "allow": ["web", "shared"] }
     ]
   }
 }

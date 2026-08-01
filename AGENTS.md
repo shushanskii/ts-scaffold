@@ -5,4 +5,5 @@ always in context, layered from most portable to most project-specific:
 
 @conventions/core.md
 @conventions/react.md
+@conventions/redux.md
 @conventions/project.md

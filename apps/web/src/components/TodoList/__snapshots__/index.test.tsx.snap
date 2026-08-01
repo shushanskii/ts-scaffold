@@ -1,0 +1,20 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TodoList > renders every todo and reports clicks by id 1`] = `
+<DocumentFragment>
+  <ul
+    class="sc-gsMGyr giWywp"
+  >
+    <li
+      class="sc-bcHNtg bmVhvj"
+    >
+      read the conventions
+    </li>
+    <li
+      class="sc-bcHNtg gdUZep"
+    >
+      add a package
+    </li>
+  </ul>
+</DocumentFragment>
+`;
