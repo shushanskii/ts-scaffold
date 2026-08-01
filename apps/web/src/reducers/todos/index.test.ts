@@ -1,15 +1,22 @@
 import { type Todo, TodoStatus } from "@app/shared";
 import { describe, expect, it } from "vitest";
-import { fetchSucceeded, initialState, todosReducer, toggled } from "#reducers/todos";
+import { initialState, loaded, loadStarted, todosReducer, toggled } from "#reducers/todos";
 
 const active: Todo = { id: "todo-1", title: "read the conventions", status: TodoStatus.Active };
 const done: Todo = { id: "todo-2", title: "add a package", status: TodoStatus.Done };
 
 describe("todosReducer", () => {
-  it("stores fetched todos and clears the loading flag", () => {
+  it("raises the loading flag when a load starts", () => {
+    const next = todosReducer(initialState, loadStarted());
+
+    expect(next.loading).toBe(true);
+    expect(initialState.loading).toBe(false);
+  });
+
+  it("stores loaded todos and clears the loading flag", () => {
     const previous = { ...initialState, loading: true };
 
-    const next = todosReducer(previous, fetchSucceeded([active]));
+    const next = todosReducer(previous, loaded([active]));
 
     expect(next.items).toEqual([active]);
     expect(next.loading).toBe(false);

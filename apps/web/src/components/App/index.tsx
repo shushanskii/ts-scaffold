@@ -6,7 +6,7 @@ export function App() {
   const { todos, loading, actions } = useTodos();
 
   useEffect(() => {
-    actions.fetch();
+    actions.load();
   }, [actions]);
 
   if (loading) {

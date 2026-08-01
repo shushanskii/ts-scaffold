@@ -4,10 +4,12 @@
   "private": true,
   "type": "module",
   "imports": {
+    "#actions/*": "./src/actions/*/index.ts",
     "#components/*": "./src/components/*/index.tsx",
     "#hooks/*": "./src/hooks/*/index.ts",
     "#reducers/*": "./src/reducers/*/index.ts",
     "#sagas/*": "./src/sagas/*/index.ts",
+    "#selectors/*": "./src/selectors/*/index.ts",
     "#store": "./src/store/index.ts"
   },
   "scripts": {

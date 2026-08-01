@@ -11,14 +11,15 @@ export const initialState: TodosState = {
   loading: false,
 };
 
+// These actions are dispatched by sagas only — never by a component or a hook.
 const todosSlice = createSlice({
   name: "todos",
   initialState,
   reducers: {
-    fetchRequested(state) {
+    loadStarted(state) {
       state.loading = true;
     },
-    fetchSucceeded(state, action: PayloadAction<readonly Todo[]>) {
+    loaded(state, action: PayloadAction<readonly Todo[]>) {
       // Copied, not aliased: the state is `readonly`, an Immer draft is not.
       state.items = [...action.payload];
       state.loading = false;
@@ -35,5 +36,5 @@ const todosSlice = createSlice({
   },
 });
 
-export const { fetchRequested, fetchSucceeded, toggled } = todosSlice.actions;
+export const { loadStarted, loaded, toggled } = todosSlice.actions;
 export const todosReducer = todosSlice.reducer;

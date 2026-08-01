@@ -64,7 +64,7 @@ flat `Thing.ts`:
 packages/<pkg>/src/
 ├── index.ts(x)               # the package's public barrel (exports)
 ├── types/<entity>/index.ts   # enums, interfaces, unions — pure types, no behaviour
-├── reducers/<entity>/index.ts# reducer + selectors + initialState (behaviour, no framework)
+├── reducers/<entity>/index.ts# reducer + initialState (behaviour, no framework)
 ├── hooks/<entity>/index.ts   # framework hooks that consume reducers
 └── components/<Name>/index.tsx
 ```

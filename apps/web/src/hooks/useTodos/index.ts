@@ -1,30 +1,33 @@
-import type { Todo } from "@app/shared";
+import type { Todo, TodoStatus } from "@app/shared";
 import { useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchRequested, toggled } from "#reducers/todos";
-import type { AppDispatch, RootState } from "#store";
+import { loadTodos, toggleTodo } from "#actions/todos";
+import { selectTodos, selectTodosLoading } from "#selectors/todos";
+import type { AppDispatch } from "#store";
 
-interface TodosActions {
-  readonly fetch: () => void;
+interface UseTodosActions {
+  readonly load: (status?: TodoStatus) => void;
   readonly toggle: (id: string) => void;
 }
 
 interface UseTodos {
   readonly todos: readonly Todo[];
   readonly loading: boolean;
-  readonly actions: TodosActions;
+  readonly actions: UseTodosActions;
 }
 
+// Reads through selectors, writes only by dispatching intents from `actions/todos`. Slice actions
+// are a saga's business; nothing above this line may reach them.
 export function useTodos(): UseTodos {
   const dispatch = useDispatch<AppDispatch>();
-  const todos = useSelector((state: RootState) => state.todos.items);
-  const loading = useSelector((state: RootState) => state.todos.loading);
+  const todos = useSelector(selectTodos);
+  const loading = useSelector(selectTodosLoading);
 
   // Memoized once so leaf components can be `memo`-ed with stable refs.
-  const actions = useMemo<TodosActions>(
+  const actions = useMemo<UseTodosActions>(
     () => ({
-      fetch: () => dispatch(fetchRequested()),
-      toggle: (id: string) => dispatch(toggled(id)),
+      load: (status?: TodoStatus) => dispatch(loadTodos({ status })),
+      toggle: (id: string) => dispatch(toggleTodo(id)),
     }),
     [dispatch],
   );

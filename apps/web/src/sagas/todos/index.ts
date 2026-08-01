@@ -1,6 +1,7 @@
 import { type Todo, TodoStatus } from "@app/shared";
-import { all, put, takeLatest } from "redux-saga/effects";
-import { fetchRequested, fetchSucceeded } from "#reducers/todos";
+import { all, put, takeEvery, takeLatest } from "redux-saga/effects";
+import { type LoadTodos, TodosActions, type ToggleTodo } from "#actions/todos";
+import { loaded, loadStarted, toggled } from "#reducers/todos";
 
 // Stands in for a real API call so the scaffold has no network dependency.
 const seed: readonly Todo[] = [
@@ -8,10 +9,22 @@ const seed: readonly Todo[] = [
   { id: "todo-2", title: "add a package", status: TodoStatus.Active },
 ];
 
-function* fetchTodos() {
-  yield put(fetchSucceeded(seed));
+function* fetchTodos(action: LoadTodos) {
+  yield put(loadStarted());
+
+  const { status } = action.payload;
+  const items = status === undefined ? seed : seed.filter((todo) => todo.status === status);
+
+  yield put(loaded(items));
+}
+
+function* toggleStatus(action: ToggleTodo) {
+  yield put(toggled(action.payload));
 }
 
 export function* rootSaga() {
-  yield all([takeLatest(fetchRequested.type, fetchTodos)]);
+  yield all([
+    takeLatest(TodosActions.Load, fetchTodos),
+    takeEvery(TodosActions.Toggle, toggleStatus),
+  ]);
 }
