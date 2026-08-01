@@ -109,3 +109,20 @@ portable to most project-specific:
 
 Read them before adding a package. They are short, and they describe what the code actually does —
 several of the rules exist because the toolchain caught the alternative.
+
+## Skills
+
+`new-package` ships with the project at `.claude/skills/new-package/`. Use it when adding a package
+rather than improvising — it carries the rules that fail silently, such as script names having to
+match the Turborepo tasks.
+
+`.agents/skills/new-package` is a **symlink** to the same directory, so agents that read the neutral
+path find it too. There is one copy of the instructions, never two to keep in step.
+
+> On Windows, git only materialises symlinks with `core.symlinks=true` and Developer Mode enabled.
+> Without them the checkout contains a text file holding the target path, and the skill silently
+> fails to load. Either turn both on, or delete `.agents/` and keep only the Claude Code path.
+
+The skill for starting a *new* project from this template lives in
+[ts-scaffold-skills](https://github.com/shushanskii/ts-scaffold-skills) — it cannot ship here,
+because it runs before the project exists.
