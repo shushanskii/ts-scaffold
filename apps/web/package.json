@@ -25,7 +25,8 @@
     "react-dom": "catalog:",
     "react-redux": "catalog:",
     "redux-saga": "catalog:",
-    "styled-components": "catalog:"
+    "styled-components": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "catalog:",

@@ -64,6 +64,7 @@ flat `Thing.ts`:
 packages/<pkg>/src/
 ├── index.ts(x)               # the package's public barrel (exports)
 ├── types/<entity>/index.ts   # enums, interfaces, unions — pure types, no behaviour
+├── schemas/<entity>/index.ts # runtime validation for wire formats + the DTOs inferred from it
 ├── reducers/<entity>/index.ts# reducer + initialState (behaviour, no framework)
 ├── hooks/<entity>/index.ts   # framework hooks that consume reducers
 └── components/<Name>/index.tsx
@@ -76,7 +77,9 @@ packages/<pkg>/src/
 
 ### Layer direction (within a package)
 
-`types → reducers → hooks → components`. A layer may import only from layers to its left. Notably
+`types → schemas → reducers → hooks → components`. A layer may import only from layers to its left.
+A **schema is behaviour, not a type** — it exists at runtime, so it never lives in `types/`. Infer
+request/response DTOs from the schema rather than declaring them twice. Notably
 **components may not import `reducers/` directly** — state logic reaches the UI through a hook. This
 is enforced by fallow boundary zones as each package grows.
 

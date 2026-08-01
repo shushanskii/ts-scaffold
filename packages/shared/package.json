@@ -7,14 +7,19 @@
     ".": "./src/index.ts"
   },
   "imports": {
+    "#schemas/*": "./src/schemas/*/index.ts",
     "#types/*": "./src/types/*/index.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "zod": "catalog:"
   },
   "devDependencies": {
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "zod": "catalog:"
   }
 }

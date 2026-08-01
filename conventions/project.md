@@ -26,7 +26,9 @@ Three packages, one per shape a real project needs. Boundaries are enforced by t
 
 ## Buckets by package
 
-- `shared` — `types/` only.
+- `shared` — `types/` (the domain model) and `schemas/` (**zod** schemas for request bodies, plus
+  the DTOs inferred from them). zod is a `peerDependency` here and a real dependency of both apps,
+  so there is only ever one copy.
 - `api` — `app/` (the Express instance, no `listen`), `routes/`, `services/`. Entry is
   `src/main.ts`, which binds the port and is the only file that does.
 - `web` — the Redux layout from [`redux.md`](./redux.md). Entry is `src/main.tsx`.

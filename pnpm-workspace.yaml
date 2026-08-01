@@ -18,6 +18,9 @@ catalog:
   # Backend runtime
   express: ^5.2.1
 
+  # Shared runtime
+  zod: ^4.4.3
+
   # Types
   "@types/react": ^19.0.0
   "@types/react-dom": ^19.0.0

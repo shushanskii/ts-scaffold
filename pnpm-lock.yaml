@@ -72,6 +72,9 @@ catalogs:
     vitest:
       specifier: ^4.1.10
       version: 4.1.10
+    zod:
+      specifier: ^4.4.3
+      version: 4.4.3
 
 importers:
 
@@ -107,6 +110,9 @@ importers:
       express:
         specifier: 'catalog:'
         version: 5.2.1
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
     devDependencies:
       '@types/express':
         specifier: 'catalog:'
@@ -153,6 +159,9 @@ importers:
       styled-components:
         specifier: 'catalog:'
         version: 6.4.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
     devDependencies:
       '@testing-library/jest-dom':
         specifier: 'catalog:'
@@ -193,6 +202,9 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.10(@types/node@26.1.2)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.2.0(@types/node@26.1.2)(esbuild@0.27.7)(jiti@2.6.1))
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
 
 packages:
 
@@ -2384,6 +2396,9 @@ packages:
     resolution: {integrity: sha512-2rAgRKu54VsHkqI0/tYkmluGXHD4KW7yZoycuqDQ15QOTnc2VVfy0nN/1eMhnQLO00A+dwtK20xuCnc1YGeUyg==}
     engines: {node: ^20.19.0 || ^22.12.0 || >=23}
 
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+
 snapshots:
 
   '@adobe/css-tools@4.5.0': {}
@@ -4315,3 +4330,5 @@ snapshots:
       string-width: 8.2.2
       y18n: 5.0.8
       yargs-parser: 22.0.0
+
+  zod@4.4.3: {}
