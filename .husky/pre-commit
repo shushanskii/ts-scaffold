@@ -1,0 +1,6 @@
+# Single source of truth for the quality gate: turbo typecheck + biome + fallow.
+if ! pnpm run audit; then
+  echo ""
+  echo "✖ pre-commit failed — fix the issues reported above, then re-commit."
+  exit 1
+fi

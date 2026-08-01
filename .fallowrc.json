@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/fallow/schema.json",
+  "boundaries": {
+    "zones": [
+      { "name": "core", "patterns": ["packages/core/src/**"] },
+      { "name": "react", "patterns": ["packages/react/src/**"] },
+      { "name": "element", "patterns": ["packages/element/src/**"] }
+    ],
+    "rules": [
+      { "from": "core", "allow": ["core"] },
+      { "from": "react", "allow": ["react", "core"] },
+      { "from": "element", "allow": ["element", "react", "core"] }
+    ]
+  }
+}
