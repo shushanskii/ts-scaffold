@@ -43,7 +43,7 @@ describe("GET /todos/:id", () => {
     const response = await request(app).get("/todos/missing");
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ error: "todo not found" });
+    expect(response.body).toEqual({ error: "todo not found", issues: [] });
   });
 });
 
@@ -63,8 +63,10 @@ describe("POST /todos", () => {
     const response = await request(app).post("/todos").send({ title: "  " });
 
     expect(response.status).toBe(400);
-    expect(response.body.error).toBe("invalid request body");
-    expect(response.body.fieldErrors.title).toBeDefined();
+    expect(response.body).toMatchObject({
+      error: "invalid request body",
+      issues: [{ field: "title" }],
+    });
   });
 });
 
@@ -86,7 +88,7 @@ describe("PATCH /todos/:id", () => {
     const response = await request(app).patch(`/todos/${created.id}`).send({ status: "archived" });
 
     expect(response.status).toBe(400);
-    expect(response.body.fieldErrors.status).toBeDefined();
+    expect(response.body.issues).toContainEqual(expect.objectContaining({ field: "status" }));
   });
 
   it("400s on an empty body", async () => {
@@ -95,8 +97,10 @@ describe("PATCH /todos/:id", () => {
     const response = await request(app).patch(`/todos/${created.id}`).send({});
 
     expect(response.status).toBe(400);
-    // The "at least one field" rule is a schema-level refinement, so it lands in formErrors.
-    expect(response.body.formErrors).toContain("at least one of title or status is required");
+    // A whole-object refinement has no path, so the issue carries no `field`.
+    expect(response.body.issues).toContainEqual({
+      message: "at least one of title or status is required",
+    });
   });
 
   it("404s on an unknown id", async () => {

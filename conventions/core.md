@@ -65,6 +65,7 @@ packages/<pkg>/src/
 ├── index.ts(x)               # the package's public barrel (exports)
 ├── types/<entity>/index.ts   # enums, interfaces, unions — pure types, no behaviour
 ├── schemas/<entity>/index.ts # runtime validation for wire formats + the DTOs inferred from it
+├── contracts/<entity>/index.ts# operation -> method, path, body schema, response schema, status
 ├── reducers/<entity>/index.ts# reducer + initialState (behaviour, no framework)
 ├── hooks/<entity>/index.ts   # framework hooks that consume reducers
 └── components/<Name>/index.tsx
@@ -77,9 +78,15 @@ packages/<pkg>/src/
 
 ### Layer direction (within a package)
 
-`types → schemas → reducers → hooks → components`. A layer may import only from layers to its left.
-A **schema is behaviour, not a type** — it exists at runtime, so it never lives in `types/`. Infer
-request/response DTOs from the schema rather than declaring them twice. Notably
+`types → schemas → contracts → reducers → hooks → components`. A layer may import only from layers
+to its left. A **schema is behaviour, not a type** — it exists at runtime, so it never lives in
+`types/`. Infer request/response DTOs from the schema rather than declaring them twice.
+
+A **contract is the one declaration of what an operation answers with**: its method, its route
+pattern for the service, its path builder for the client, the schemas for body and response, and
+the success status. Both sides read it, so neither can quietly disagree with the other. Anything a
+contract cannot express in types — a route pattern and its path builder are two hand-written
+strings — gets a test instead. Notably
 **components may not import `reducers/` directly** — state logic reaches the UI through a hook. This
 is enforced by fallow boundary zones as each package grows.
 

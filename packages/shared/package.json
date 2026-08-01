@@ -7,6 +7,7 @@
     ".": "./src/index.ts"
   },
   "imports": {
+    "#contracts/*": "./src/contracts/*/index.ts",
     "#schemas/*": "./src/schemas/*/index.ts",
     "#types/*": "./src/types/*/index.ts"
   },

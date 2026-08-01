@@ -1,19 +1,27 @@
 import type { Todo, TodoStatus } from "@app/shared";
 import { useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { loadTodos, toggleTodo } from "#actions/todos";
-import { selectRemainingCount, selectTodos, selectTodosLoading } from "#selectors/todos";
+import { createTodo, deleteTodo, loadTodos, toggleTodo } from "#actions/todos";
+import {
+  selectRemainingCount,
+  selectTodos,
+  selectTodosError,
+  selectTodosLoading,
+} from "#selectors/todos";
 import type { AppDispatch } from "#store";
 
 interface UseTodosActions {
   readonly load: (status?: TodoStatus) => void;
-  readonly toggle: (id: string) => void;
+  readonly create: (title: string) => void;
+  readonly toggle: (todo: Todo) => void;
+  readonly remove: (todo: Todo) => void;
 }
 
 interface UseTodos {
   readonly todos: readonly Todo[];
   readonly remaining: number;
   readonly loading: boolean;
+  readonly error: string | undefined;
   readonly actions: UseTodosActions;
 }
 
@@ -24,15 +32,19 @@ export function useTodos(): UseTodos {
   const todos = useSelector(selectTodos);
   const remaining = useSelector(selectRemainingCount);
   const loading = useSelector(selectTodosLoading);
+  const error = useSelector(selectTodosError);
 
-  // Memoized once so leaf components can be `memo`-ed with stable refs.
+  // Memoized once so leaf components can be `memo`-ed with stable refs. Nothing here closes over
+  // `todos`, which is what keeps the reference stable as the data changes.
   const actions = useMemo<UseTodosActions>(
     () => ({
       load: (status?: TodoStatus) => dispatch(loadTodos({ status })),
-      toggle: (id: string) => dispatch(toggleTodo(id)),
+      create: (title: string) => dispatch(createTodo({ title })),
+      toggle: (todo: Todo) => dispatch(toggleTodo({ id: todo.id, status: todo.status })),
+      remove: (todo: Todo) => dispatch(deleteTodo({ id: todo.id })),
     }),
     [dispatch],
   );
 
-  return { todos, remaining, loading, actions };
+  return { todos, remaining, loading, error, actions };
 }

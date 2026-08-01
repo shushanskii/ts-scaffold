@@ -1,19 +1,39 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`TodoList > renders every todo and reports clicks by id 1`] = `
+exports[`TodoList > reports the clicked todo, not just its id 1`] = `
 <DocumentFragment>
   <ul
-    class="sc-gsMGyr giWywp"
+    class="sc-dkHxwO bblxwT"
   >
     <li
-      class="sc-bcHNtg bmVhvj"
+      class="sc-bcHNtg drpPDx"
     >
-      read the conventions
+      <span
+        class="sc-gsMGyr fbeoKx"
+      >
+        read the conventions
+      </span>
+      <button
+        aria-label="remove read the conventions"
+        type="button"
+      >
+        ×
+      </button>
     </li>
     <li
-      class="sc-bcHNtg gdUZep"
+      class="sc-bcHNtg drpPDx"
     >
-      add a package
+      <span
+        class="sc-gsMGyr fmfvrX"
+      >
+        add a package
+      </span>
+      <button
+        aria-label="remove add a package"
+        type="button"
+      >
+        ×
+      </button>
     </li>
   </ul>
 </DocumentFragment>
