@@ -1,7 +1,7 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-// Keep in sync with `base` in src/api/todos.
+// Keep in sync with the prefix the clients in src/api use.
 const apiPrefix = "/api";
 const apiTarget = process.env.API_URL ?? "http://localhost:3000";
 

@@ -41,12 +41,21 @@ The `@app` scope and the `Todo` domain exist so the template runs. Both are mean
 3. **Delete the example domain** — everything named `todo`/`Todo` under `packages/shared/src`,
    `apps/api/src` and `apps/web/src`, including its tests and snapshots. Keep the directory
    structure; it is the convention.
-4. **Fill in `conventions/project.md`** — it is deliberately close to empty. Package names, the
+4. **Sweep up after it.** The example was the only consumer of several dependencies and exports, so
+   they die with it. Run `pnpm run audit` and remove exactly what fallow names — from the package
+   manifests, from the `catalog:` in `pnpm-workspace.yaml`, and from the source — then run it again
+   until it is quiet. Do not work from a list: what becomes dead depends on which packages you kept.
+5. **Write your first test.** Deleting the example left none, and `vitest` exits non-zero when it
+   finds no test files — on purpose. `pnpm test` stays red until a real test exists, which is the
+   point: the first test lands before the first feature, not after. Do not reach for
+   `--passWithNoTests`; that buys a green gate by making it stop checking.
+6. **Fill in `conventions/project.md`** — it is deliberately close to empty. Package names, the
    package graph, and domain terms belong there, not in the portable layers.
-5. **Update the boundary zones** in `.fallowrc.json` if you add or rename packages. A package with
+7. **Update the boundary zones** in `.fallowrc.json` if you add or rename packages. A package with
    no zone is a package with no enforced boundaries.
 
-Then `pnpm run audit && pnpm test` should still be green. It will not be if you missed a step.
+Then `pnpm run audit && pnpm test` should be green. If they are not, a step above was missed — fix
+that rather than building on top of it.
 
 ## Commands
 
