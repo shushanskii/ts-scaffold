@@ -80,8 +80,8 @@ packages/<pkg>/src/
 `types → schemas → reducers → hooks → components`. A layer may import only from layers to its left.
 A **schema is behaviour, not a type** — it exists at runtime, so it never lives in `types/`. Infer
 request/response DTOs from the schema rather than declaring them twice. Notably
-**components may not import `reducers/` directly** — state logic reaches the UI through a hook. This
-is enforced by fallow boundary zones as each package grows.
+**components may not import `reducers/` directly** — state logic reaches the UI through a hook.
+fallow boundary zones enforce this per bucket, one zone per layer, in the root `.fallowrc.json`.
 
 ## Data modeling
 
@@ -106,13 +106,22 @@ These last three describe hand-written reducers. A state library may satisfy the
 Before considering any change done, run from the **repo root**:
 
 ```bash
-pnpm run audit   # turbo typecheck + biome check + fallow dead-code (read-only gate)
-pnpm test        # turbo test (vitest per package)
+pnpm run verify          # the gate: audit + tests + both builds
+pnpm run verify --force  # the same, ignoring the Turborepo cache
 ```
 
-- **`pnpm run audit`** is the single verification gate: `turbo run typecheck` (types, per package) →
-  `biome check .` (format + lint, whole repo) → `fallow dead-code --fail-on-issues` (dead code +
-  architecture boundaries, whole workspace). Green `audit` = types, style, and structure all pass.
+- **`pnpm run verify`** is the single verification gate: `turbo run typecheck` → `biome check .` →
+  `fallow dead-code --fail-on-issues` → `turbo run test` → `turbo run build`. Green `verify` =
+  types, style, structure, behaviour and both bundles all pass.
+- **`pnpm run audit`** is the read-only half of it — typecheck, Biome, fallow — and the one to
+  reach for while iterating. Green `audit` says nothing about whether the tests pass or the apps
+  still bundle, so it is never the last command before a commit.
+- Flags you add are forwarded to the task runner only: `--force` reaches turbo, not Biome or
+  fallow. That routing is `scripts/gate.mjs`, and it exists because a chained script string appends
+  the flag to the last tool in the chain instead.
+- **A hook is not a gate.** `git commit --no-verify` skips it. `.github/workflows/ci.yml` runs the
+  same `verify` on every push and pull request, and branch protection on `main` is what makes it
+  required — that one setting is not in the repository.
 - **`pnpm run fix`** = `biome check --write .` (auto-fix lint + format). fallow's own fixes remove
   code, so run `fallow fix` deliberately — never as part of `fix`.
 - Biome: 2-space indent, double quotes, semicolons, `useNamingConvention` with `strictCase: false`
@@ -128,8 +137,14 @@ fallow runs as both an MCP server (interactive) and inside the gate:
 - **`fallow dead-code --fail-on-issues`** — expect `No issues found`: no unused exports/files/deps,
   no unresolved imports, no circular deps, no boundary violations.
 - **`guard`** (MCP) — check architecture rules that apply to a file **before editing it**.
-- Boundaries between packages live in the root `.fallowrc.json`; the concrete package graph is
-  documented in [`project.md`](./project.md).
+- Boundaries — between packages, and between the layers inside one package — live in the root
+  `.fallowrc.json`; the concrete package graph is documented in [`project.md`](./project.md).
+- Two details of the config are easy to lose and impossible for fallow to notice: **a zone with no
+  rule entry is unrestricted**, and a file matching no zone is unrestricted too. That is why
+  `coverage.requireAllFiles` is on, and why `apps/web/src/architecture/index.test.ts` asserts the
+  rules themselves — deleting one leaves fallow green on a tree that does not yet break it.
+- Boundary checks only see code reachable from an entry point; a dead file with a violation is
+  caught by the unused-file check instead. Both are in the same command, which is the point.
 - Other useful tools: `find_dupes`, `check_health`, `inspect_target` / `impact`.
 
 ## Git & commits
@@ -138,7 +153,8 @@ fallow runs as both an MCP server (interactive) and inside the gate:
   `refactor`, `test`, `style`, `perf`. Scope lowercase; subject imperative, lowercase, no period.
 - Default branch is `main`; branch off it rather than committing straight to `main`.
 - Enforced automatically: **commitlint** on a **husky** `commit-msg` hook rejects non-conforming
-  messages; the **`pre-commit`** hook runs `pnpm run audit`. Hooks activate after `pnpm install`.
+  messages; the **`pre-commit`** hook runs `pnpm run verify`. Hooks activate after `pnpm install`.
+  Both are conveniences — CI runs the same gate and cannot be argued with.
 
 ```
 feat(core): add field validation rules

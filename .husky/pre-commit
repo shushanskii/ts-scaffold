@@ -1,5 +1,6 @@
-# Single source of truth for the quality gate: turbo typecheck + biome + fallow.
-if ! pnpm run audit; then
+# The gate lives in scripts/gate.mjs, so this hook, CI and a human at a keyboard run one thing.
+# `--no-verify` still bypasses this; .github/workflows/ci.yml is what cannot be skipped.
+if ! pnpm run verify; then
   echo ""
   echo "✖ pre-commit failed — fix the issues reported above, then re-commit."
   exit 1
