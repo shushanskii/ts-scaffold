@@ -32,7 +32,9 @@
       { "name": "web-selectors", "patterns": ["apps/web/src/selectors/**"] },
       { "name": "web-hooks", "patterns": ["apps/web/src/hooks/**"] },
       { "name": "web-components", "patterns": ["apps/web/src/components/**"] },
-      { "name": "web-entry", "patterns": ["apps/web/src/main.tsx"] }
+      { "name": "web-entry", "patterns": ["apps/web/src/main.tsx"] },
+
+      { "name": "repo-tooling", "patterns": ["scripts/**"] }
     ],
     "rules": [
       {
@@ -85,7 +87,9 @@
       {
         "from": "web-entry",
         "allow": ["web-components", "web-store", "web-sagas", "shared-barrel"]
-      }
+      },
+
+      { "from": "repo-tooling", "allow": [] }
     ],
     "coverage": {
       "requireAllFiles": true,
