@@ -8,7 +8,15 @@ import {
   type ToggleTodoAction,
 } from "#actions/todos";
 import { todosApi } from "#api/todos";
-import { addTodo, removeTodo, replaceTodo, setError, setLoading, setTodos } from "#reducers/todos";
+import {
+  addTodo,
+  removeTodo,
+  replaceTodo,
+  setError,
+  setFilter,
+  setLoading,
+  setTodos,
+} from "#reducers/todos";
 
 function toMessage(error: unknown): string {
   return error instanceof Error ? error.message : "unexpected error";
@@ -21,9 +29,12 @@ function* loadTodos(action: LoadTodosAction) {
   yield put(setError(undefined));
 
   try {
-    const todos: readonly Todo[] = yield call(todosApi.list);
-    const { status } = action.payload;
+    const { status, overdue } = action.payload;
+    // The deadline is the service's clock, so the overdue filter goes to it as a query instead of
+    // being recomputed here from a browser date the user can set to anything.
+    const todos: readonly Todo[] = yield call(todosApi.list, { overdue });
 
+    yield put(setFilter({ status, overdue }));
     yield put(setTodos(status === undefined ? todos : todos.filter((t) => t.status === status)));
     yield put(setLoading(false));
   } catch (error) {
@@ -34,7 +45,11 @@ function* loadTodos(action: LoadTodosAction) {
 
 function* createTodo(action: CreateTodoAction) {
   try {
-    const todo: Todo = yield call(todosApi.create, { title: action.payload.title });
+    const { title, dueDate } = action.payload;
+    const todo: Todo = yield call(todosApi.create, {
+      title,
+      ...(dueDate === undefined ? {} : { dueDate }),
+    });
 
     yield put(addTodo(todo));
   } catch (error) {

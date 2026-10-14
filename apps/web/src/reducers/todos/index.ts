@@ -1,16 +1,26 @@
-import type { Todo } from "@app/shared";
+import type { Todo, TodoStatus } from "@app/shared";
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
 export interface TodosState {
   readonly items: readonly Todo[];
   readonly loading: boolean;
   readonly error: string | undefined;
+  /**
+   * Which slice of the service `items` came from, so the UI can say what it is looking at. Kept in
+   * the store rather than in the component because it decides what a reload fetches: two components
+   * showing the list have to agree on it. An absent field means the whole list.
+   */
+  readonly filter: {
+    readonly status?: TodoStatus;
+    readonly overdue?: boolean;
+  };
 }
 
 export const initialState: TodosState = {
   items: [],
   loading: false,
   error: undefined,
+  filter: {},
 };
 
 // Dispatched by sagas only — never by a component or a hook. Named `[verb][Entity]` like any other
@@ -29,6 +39,11 @@ const todosSlice = createSlice({
     setTodos(state, action: PayloadAction<readonly Todo[]>) {
       // Copied, not aliased: the state is `readonly`, an Immer draft is not.
       state.items = [...action.payload];
+    },
+    // Records what was asked for, separately from what came back: the same filter can return a
+    // different list an hour later, and the label would be lying.
+    setFilter(state, action: PayloadAction<TodosState["filter"]>) {
+      state.filter = action.payload;
     },
     addTodo(state, action: PayloadAction<Todo>) {
       state.items.push(action.payload);
@@ -54,6 +69,6 @@ const todosSlice = createSlice({
   },
 });
 
-export const { setLoading, setError, setTodos, addTodo, replaceTodo, removeTodo } =
+export const { setLoading, setError, setTodos, setFilter, addTodo, replaceTodo, removeTodo } =
   todosSlice.actions;
 export const todosReducer = todosSlice.reducer;

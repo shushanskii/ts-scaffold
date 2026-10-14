@@ -6,6 +6,7 @@ import {
   removeTodo,
   replaceTodo,
   setError,
+  setFilter,
   setLoading,
   setTodos,
   todosReducer,
@@ -62,6 +63,25 @@ describe("todosReducer", () => {
     const previous = { ...initialState, items: [active, done] };
 
     expect(todosReducer(previous, removeTodo(active.id)).items).toEqual([done]);
+  });
+
+  it("records the filter the list was fetched with", () => {
+    const next = todosReducer(initialState, setFilter({ overdue: true }));
+
+    expect(next.filter).toEqual({ overdue: true });
+    expect(next.items).toEqual([]);
+    expect(initialState.filter).toEqual({});
+  });
+
+  // Replacing, not merging: a filter is one request, and merging would leave a stale `status`
+  // behind every time the overdue toggle turned off.
+  it("replaces the filter instead of merging it", () => {
+    const overdue = todosReducer(initialState, setFilter({ overdue: true }));
+
+    const cleared = todosReducer(overdue, setFilter({ status: TodoStatus.Active }));
+
+    expect(cleared.filter).toEqual({ status: TodoStatus.Active });
+    expect(overdue.filter).toEqual({ overdue: true });
   });
 
   it("returns the same state object when nothing matches", () => {

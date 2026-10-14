@@ -47,4 +47,6 @@ export const todoListQuerySchema = z.object({
 
 export type CreateTodo = z.infer<typeof createTodoSchema>;
 export type UpdateTodo = z.infer<typeof updateTodoSchema>;
-export type TodoListQuery = z.infer<typeof todoListQuerySchema>;
+// `Partial` because the transform makes the key always present in the parsed output, and a caller
+// building a request needs to leave it out entirely.
+export type TodoListQuery = Partial<z.infer<typeof todoListQuerySchema>>;

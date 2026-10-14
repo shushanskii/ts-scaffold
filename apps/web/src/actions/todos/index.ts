@@ -19,6 +19,8 @@ export type LoadTodosAction = {
   readonly type: TodosActions.Load;
   readonly payload: {
     readonly status?: TodoStatus;
+    /** Ask the service for only the todos whose deadline has passed. */
+    readonly overdue?: boolean;
   };
 };
 
@@ -26,6 +28,7 @@ export type CreateTodoAction = {
   readonly type: TodosActions.Create;
   readonly payload: {
     readonly title: string;
+    readonly dueDate?: string;
   };
 };
 

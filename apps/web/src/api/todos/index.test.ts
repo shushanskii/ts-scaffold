@@ -32,6 +32,28 @@ describe("todosApi.list", () => {
 
     await expect(todosApi.list()).rejects.toThrow("GET /api/todos failed with 500");
   });
+
+  it("sends the overdue filter spelled out as a query", async () => {
+    const fetchMock = mockFetch({ json: () => Promise.resolve([todo]) });
+
+    await todosApi.list({ overdue: true });
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/todos?overdue=true", { headers: undefined });
+  });
+
+  // `overdue=false` asks for the complement; an absent filter asks for everything. A generic query
+  // builder would collapse the two.
+  it("keeps overdue=false distinct from no filter at all", async () => {
+    const fetchMock = mockFetch({ json: () => Promise.resolve([todo]) });
+
+    await todosApi.list({ overdue: false });
+    await todosApi.list({});
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/todos?overdue=false", {
+      headers: undefined,
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/todos", { headers: undefined });
+  });
 });
 
 describe("todosApi.update", () => {

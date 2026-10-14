@@ -38,4 +38,19 @@ describe("TodoList", () => {
     expect(handleRemove).toHaveBeenCalledExactlyOnceWith(todos[0]);
     expect(handleToggle).not.toHaveBeenCalled();
   });
+
+  it("prints a due date only for the todo that has one", () => {
+    const dated: readonly Todo[] = [
+      { id: "todo-3", title: "file taxes", status: TodoStatus.Active, dueDate: "2026-10-20" },
+      { id: "todo-4", title: "no deadline", status: TodoStatus.Active },
+    ];
+
+    const { getByText, getAllByText, asFragment } = render(
+      <TodoList onRemove={vi.fn()} onToggle={vi.fn()} todos={dated} />,
+    );
+
+    expect(getByText("due 2026-10-20")).toBeDefined();
+    expect(getAllByText(/^due /)).toHaveLength(1);
+    expect(asFragment()).toMatchSnapshot();
+  });
 });

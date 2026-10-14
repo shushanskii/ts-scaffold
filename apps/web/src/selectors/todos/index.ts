@@ -2,12 +2,23 @@ import { type Todo, TodoStatus } from "@app/shared";
 import { createSelector } from "@reduxjs/toolkit";
 import type { RootState } from "#store";
 
-// The only way the UI reads Redux state. Typed against `RootState`, so selectors sit after
-// `store/` in the layer order.
+// The UI reads through selectors. Never `useSelector((state) => state.todos.items)` inline —
+// call a named selector from here.
+
+/**
+ * Which slice of the service the store is holding. Derived from `RootState` rather than imported
+ * from `reducers/`: selectors sit after `store/` so that they never reach back into it, and the
+ * store's shape is the one place that says what a filter is.
+ */
+export type TodosFilter = RootState["todos"]["filter"];
 
 // Plain reads: they return what is already in the store, so there is nothing to memoize.
 export function selectTodos(state: RootState): readonly Todo[] {
   return state.todos.items;
+}
+
+export function selectTodosFilter(state: RootState): TodosFilter {
+  return state.todos.filter;
 }
 
 export function selectTodosLoading(state: RootState): boolean {
