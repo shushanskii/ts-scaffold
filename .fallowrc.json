@@ -64,18 +64,9 @@
       { "from": "shared-barrel", "allow": ["shared-types", "shared-schemas"] },
 
       { "from": "api-services", "allow": ["shared-barrel"] },
-      {
-        "from": "api-routes",
-        "allow": ["api-services", "shared-barrel"]
-      },
-      {
-        "from": "api-app",
-        "allow": ["api-routes", "api-services", "shared-barrel"]
-      },
-      {
-        "from": "api-entry",
-        "allow": ["api-app", "api-routes", "api-services", "shared-barrel"]
-      },
+      { "from": "api-routes", "allow": ["api-services", "shared-barrel"] },
+      { "from": "api-app", "allow": ["api-routes", "api-services", "shared-barrel"] },
+      { "from": "api-entry", "allow": ["api-app", "api-routes", "api-services", "shared-barrel"] },
 
       { "from": "web-api", "allow": ["shared-barrel"] },
       { "from": "web-actions", "allow": ["shared-barrel"] },
@@ -84,22 +75,13 @@
         "from": "web-sagas",
         "allow": ["web-api", "web-actions", "web-reducers", "shared-barrel"]
       },
-      {
-        "from": "web-store",
-        "allow": ["web-reducers", "web-sagas", "shared-barrel"]
-      },
-      {
-        "from": "web-selectors",
-        "allow": ["web-store", "web-actions", "shared-barrel"]
-      },
+      { "from": "web-store", "allow": ["web-reducers", "web-sagas", "shared-barrel"] },
+      { "from": "web-selectors", "allow": ["web-store", "web-actions", "shared-barrel"] },
       {
         "from": "web-hooks",
         "allow": ["web-selectors", "web-store", "web-actions", "shared-barrel"]
       },
-      {
-        "from": "web-components",
-        "allow": ["web-hooks", "web-components", "shared-barrel"]
-      },
+      { "from": "web-components", "allow": ["web-hooks", "web-components", "shared-barrel"] },
       {
         "from": "web-entry",
         "allow": ["web-components", "web-store", "web-sagas", "shared-barrel"]
@@ -113,6 +95,42 @@
         "apps/web/vitest.config.ts",
         "apps/web/vitest.setup.ts",
         "apps/web/index.html"
+      ]
+    },
+    "calls": {
+      "forbidden": [
+        {
+          "from": "web-components",
+          "callee": ["useSelector", "useDispatch", "fetch"]
+        },
+        {
+          "from": "web-selectors",
+          "callee": "fetch"
+        },
+        {
+          "from": "web-reducers",
+          "callee": "fetch"
+        },
+        {
+          "from": "web-actions",
+          "callee": "fetch"
+        },
+        {
+          "from": "web-sagas",
+          "callee": "fetch"
+        },
+        {
+          "from": "web-store",
+          "callee": "fetch"
+        },
+        {
+          "from": "web-hooks",
+          "callee": "fetch"
+        },
+        {
+          "from": "web-entry",
+          "callee": "fetch"
+        }
       ]
     }
   }

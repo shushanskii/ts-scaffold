@@ -19,11 +19,19 @@ interface BoundaryRule {
   readonly allowTypeOnly?: readonly string[];
 }
 
+interface BoundaryCalls {
+  readonly forbidden?: readonly {
+    readonly from: string;
+    readonly callee?: string | readonly string[];
+  }[];
+}
+
 interface FallowConfig {
   readonly boundaries: {
     readonly zones?: readonly BoundaryZone[];
     readonly rules?: readonly BoundaryRule[];
     readonly coverage?: { readonly requireAllFiles?: boolean };
+    readonly calls?: BoundaryCalls;
   };
 }
 
@@ -60,6 +68,19 @@ const WEB_LAYERS = [
 
 const API_LAYERS = ["api-services", "api-routes", "api-app", "api-entry"] as const;
 const SHARED_LAYERS = ["shared-types", "shared-schemas", "shared-barrel"] as const;
+
+// A zone listed under `calls.forbidden` for one of these callees may not call it.
+function isCallForbidden(from: string, callee: string): boolean {
+  return (config.boundaries.calls?.forbidden ?? []).some((rule) => {
+    if (rule.from !== from) {
+      return false;
+    }
+
+    const patterns = rule.callee ?? [];
+
+    return (typeof patterns === "string" ? [patterns] : patterns).includes(callee);
+  });
+}
 
 describe("fallow boundary config", () => {
   it("declares a zone for every layer the conventions name", () => {
@@ -144,5 +165,20 @@ describe("fallow boundary config", () => {
     expect(isAllowed("api-test", "web-store")).toBe(false);
     expect(isAllowed("shared-test", "web-store")).toBe(false);
     expect(isAllowed("web-test", "web-reducers")).toBe(true);
+  });
+
+  it("forbids the rules that are calls rather than imports", () => {
+    // conventions/redux.md: the UI reads through selectors and dispatches intents through a hook;
+    // HTTP lives in api/. None of that is an import, so zones alone cannot express it.
+    for (const callee of ["useSelector", "useDispatch", "fetch"]) {
+      expect(isCallForbidden("web-components", callee), `web-components may call ${callee}`).toBe(
+        true,
+      );
+    }
+
+    expect(isCallForbidden("web-hooks", "fetch")).toBe(true);
+    expect(isCallForbidden("web-sagas", "fetch")).toBe(true);
+    // The one layer that owns HTTP keeps it.
+    expect(isCallForbidden("web-api", "fetch")).toBe(false);
   });
 });
