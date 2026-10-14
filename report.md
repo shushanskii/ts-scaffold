@@ -209,3 +209,206 @@ git checkout -- apps/web/src/components/App/index.tsx
 ```
 
 Замечание по методике: файл-проба, не достижимый от точки входа, проверкой границ **не** проверяется (см. §1.2) — правьте существующий достижимый файл и откатывайте его.
+
+---
+
+## 4. Исполнение
+
+Ветка `feat/enforced-layers` от `8661b11` (`main`), 9 коммитов, не запушена. Все утверждения ниже
+получены прогонами на этом дереве; сырые логи прогонов — `/tmp/probes/`, харнесс — `/tmp/probe.py`
+(в репозиторий не попадает: харнесс правит рабочие файлы).
+
+| Коммит | Что |
+|---|---|
+| `76f62c2` | `.fallowrc.json`: 20 зон / 20 правил + `coverage.requireAllFiles` |
+| `c8b650a` | тест-ловушка `apps/web/src/architecture/index.test.ts` (10 проверок) |
+| `d675e3b` | `calls.forbidden` (`useSelector` / `useDispatch` / `fetch`) + 3 проверки ловушки |
+| `0267bdf` | `scripts/gate.mjs` — починен проброс флага; скрипты `audit` / `verify` |
+| `d07979b` | `.github/workflows/ci.yml` |
+| `329b389` | README, `conventions/core.md`, `conventions/project.md`, skill: гейт = `verify` |
+| `f5c96bf` → `0c339bc` | фича `dueDate` + фильтр `overdue`: shared → api → web |
+
+Итог: `pnpm run verify --force` зелёный с холодного кэша; **66 тестов в 7 файлах** (было 32 в 6).
+
+### 4.1 Часть 1 — слои (вариант A1)
+
+Конфиг: по зоне на бакет на пакет (`shared` 3, `api` 4, `web` 9) + `repo-tooling` + три тестовые
+зоны первыми; `coverage.requireAllFiles: true` с `allowUnmatched` на конфиги сборщиков и
+`apps/web/index.html`. `fallow list --boundaries` — 20 зон, 20 правил, файлов вне зон 0.
+
+**Таблица «правило → подстава → чем поймано».** Все подставы — правка **достижимого** файла
+(иначе проверка границ слепая, см. §1.2), прогон `pnpm run audit`, откат. «Поймано» = гейт красный
+именно по этому правилу, а не по побочной находке.
+
+| # | Правило (источник) | Подстава | Поймано | Сообщение |
+|---|---|---|---|---|
+| A01 | «Components may not import `reducers/`» (react.md:17) | `components/App` → `#reducers/todos` | да | `web-components → web-reducers` |
+| A02 | то же относительным путём | `../../reducers/todos` | да | то же — subpath и относительный резолвятся одинаково |
+| A03 | «A saga therefore cannot use a selector» (redux.md:56) | `sagas` → `#selectors/todos` | да | `web-sagas → web-selectors` |
+| A04 | «`reducers/` never imports `store/`» (redux.md:96) | value-импорт | да | `web-reducers → web-store` + 2 цикла |
+| A05 | то же, только тип | `import type { RootState }` | да | то же: `allowTypeOnly` не выставлен ни у одного правила |
+| A06 | «state reaches the UI through a hook» | `hooks/useTodos` → `#reducers/todos` | да | `web-hooks → web-reducers` |
+| A07 | «The UI dispatches intents only» (redux.md:24) | `App` → `#actions/todos` | да | `web-components → web-actions` |
+| A08 | компонент не ходит в сеть сам | `TodoList` → `#api/todos` | да | `web-components → web-api` |
+| A09–A12 | «Layers only import leftwards» (README:113) | reducer→hook, store→component, `api`→sagas, saga→store | да ×4 | четыре отдельные находки, каждая своим правилом |
+| A14, A15 | правила **строже**, чем «просто влево» | hook→`api`, component→store | да ×2 | ловятся, хотя формально направление «влево» |
+| B01 | «`api` and `web` never import each other» (project.md:25) | `web` → `@app/api` | да ×2 | TS2307 **и** `web-components → api-entry` |
+| B02 | то же в другую сторону | `api` → `@app/web` | да ×2 | TS2307 + fallow `Unresolved imports` |
+| B03, B04 | «`shared` imports nothing» | `shared` → `@app/web`, `@app/api` | да | `shared-schemas → api-entry` + 2 цикла |
+| B05 | barrel-only: внутрь `shared` через `#`-subpath нельзя | `@app/shared/schemas/todo` | да | TS2307 (не экспортируется из barrel) |
+| B06, B07 | обход имени пакета относительным путём | `../../../packages/shared/src/...`, `../../../api/src/...` | да | `web-components → shared-types`, `→ api-services` |
+| C01 | тесты не протаскивают пакетный граф | web-тест → `@app/api` | да | `web-test → api-entry` |
+| C03 | новый бакет не должен оставаться без правил | `apps/web/src/utils/index.ts` | да | `Boundary coverage: … no matching boundary zone` |
+| C02 | тот же файл, но недостижимый | — | да | `Unused files` (dead-code), а не coverage |
+| F01, F02 | «state reaches the UI through a hook» | inline `useSelector` / `useDispatch` в компоненте | да (после `d675e3b`) | `` `useSelector` matches forbidden … in zone 'web-components' `` |
+| F03–F05 | сеть только в `api/` | `fetch` в компоненте / саге / хуке | да ×3 | `` `fetch` matches forbidden `fetch` in zone 'web-sagas' `` и т.д. |
+
+Контрольные прогоны A13, B08, B10, C04 (легальные рёбра, включая относительный импорт внутри
+пакета и легальный импорт в тестовой зоне) — зелёные: конфиг не мешает тому, что правилами
+разрешено.
+
+**Про недостижимые файлы (§1.2) — подтверждено, но формулировку надо уточнить.** Проба
+`apps/web/src/components/__probe.tsx`, от точки входа недостижима:
+
+- **D01** (с запрещённым импортом): `--boundary-violations` даёт **0 находок по границам**; гейт
+  красный только из-за `Unused files`.
+- **D02** (тот же файл, **без** нарушений): тоже `Unused files`, тоже красный.
+
+Значит вывод отчёта верен — граница под защитой только при едином гейте (boundaries для
+достижимого, dead-code для недостижимого). Но «прошёл гейт молча» в §1.2 верно только про проверку
+границ: гейт в целом красный и различить «нарушение» и «просто лишний файл» не может.
+
+**Тест-ловушка** (`apps/web/src/architecture/index.test.ts`, читает `.fallowrc.json` через Vite
+`?raw`, 10 проверок) красная на:
+
+- схлопнутом конфиге (`main`, 3 пакетные зоны) — 8 из 10 проверок, первая: `missing zone: web-api`;
+- **удалённой одной записи правила** (`from: "web-components"`) — и вот здесь главное: fallow на
+  том же дереве отвечает `✓ No issues found` и **с внесённым запрещённым `components → reducers`
+  импортом `exit=0`**, то есть нарушение становится невидимым, а ловушка даёт 4 красные проверки,
+  включая `zone without a rule entry: web-components`.
+
+Семантика fallow «no rule entry means unrestricted» превращает опечатку в конфиге в молчаливое
+отсутствие гейта, и fallow сам этого не замечает никогда. Это и есть обоснование ловушки, а не
+дубль проверки.
+
+**Что гейт по-прежнему не выражает.** Шесть правил из конвенций не являются импортами и не
+ловятся: сырая строка вместо `ActionTypes` (E04), inline-обработчик в JSX (E05),
+`dangerouslySetInnerHTML` (E06), не выключенный thunk (E07), тест без финального
+`toMatchSnapshot()` (E08), `select()` в саге (E09). E05–E08 проходят полностью зелёными; E04 и E09
+краснеют только из-за артефакта самой пробы (`Unused exports`), к правилу это не относится. Это и
+есть A4 из §1.3 — он не сделан и остаётся открытым. Живой прецедент дыры уже лежал в `main`: у
+теста «ignores a blank title» в `TodoForm/index.test.tsx` не было финального `toMatchSnapshot()`,
+которое `conventions/react.md` требует, — поправлено в `0c339bc`.
+
+### 4.2 Часть 2 — гейт, который нельзя обойти (вариант B1)
+
+- **`scripts/gate.mjs`** — корень бага из §2.3.2: pnpm дописывает флаг в конец цепочки, и его
+  получал `fallow dead-code --fail-on-issues --force` (`unexpected argument`). Скрипт раздаёт
+  аргументы: флаги уходят только turbo-задачам, `audit` и `verify` собираются по шагам со
+  заголовками. Проверено: `pnpm run audit --force` → **exit 0** (в отчёте — падение),
+  `pnpm run verify --force` → exit 0.
+- **`pnpm run verify`** = types → style → structure → tests → build.
+- **`.github/workflows/ci.yml`** — один job `verify` по списку §3 (PR 2): `permissions:
+  contents: read`, `concurrency` + `cancel-in-progress`, `persist-credentials: false`, install
+  `--frozen-lockfile`, `pnpm dedupe --check`, `pnpm run verify --force`, advisory-шаг с
+  `continue-on-error`.
+- **`.husky/pre-commit`** → `pnpm run verify`; README («The gate»), `conventions/core.md`,
+  `conventions/project.md`, skill — обещание «single verification command» теперь совпадает с
+  реальностью, плюс предупреждение «хук — не гейт».
+
+**Проверка ссылок** — каждую открыл `curl -L`, статусы ниже.
+
+| Ссылка | HTTP | Итог |
+|---|---|---|
+| `github.com/pnpm/setup` | 200 | тег `v1` **существует** (v1.0.0) и содержит `runtime` / `cache` / `install`, то есть `pnpm/setup@v1` из отчёта **рабочий**; актуальный мажор — `v3.1.1`. Взял `@v3`. |
+| `github.com/actions/checkout` | 200 | `@v5` существует; актуальный мажор — `v7.0.1`. Взял `@v7`. |
+| `fallow.tools/docs/configuration/boundaries/` | 200 | живая |
+| `docs.fallow.tools/configuration/boundaries` | 200 | редирект на `fallow.tools/docs/...` — в отчёте это одно и то же, не ошибка |
+| `turborepo.dev/docs/guides/ci-vendors/github-actions` | 200 | живая |
+| `turborepo.dev/docs/core-concepts/filtering` | 200 | **редирект** на `/docs/crafting-your-repository/running-tasks` — адрес устарел, контент тот же |
+| `github.blog/…dependabot…pnpm-workspace-catalogs-ga` | 200 | живая; что dependabot действительно понимает `catalog:`, по посту проверить нельзя — утверждение помечаю непроверенным, а не подтверждённым |
+| `docs.renovatebot.com/modules/manager/npm/` | 200 | живая |
+| `dependabot-core/issues/14794` | 200 | живая |
+| `docs.github.com/…/control-workflow-concurrency` | 200 | живая |
+
+Убрано из списка отчёта: **smoke-тест `/health`** — эндпоинта в `apps/api` нет (`GET /health` →
+404). `fallow ci-template` в CI не использован: шаблон GitLab'овский, как в отчёте и написано.
+
+### 4.3 Часть 3 — фича через все слои
+
+Порядок — строго по `conventions/redux.md`, после каждого слоя `pnpm run verify`.
+
+| Слой | Что добавлено | Тесты |
+|---|---|---|
+| shared | `Todo.dueDate?: string` (ISO-дата), `nullable` в `updateTodoSchema` (отсутствует — оставить, `null` — снять), `todoListQuerySchema` | 9 новых (14) |
+| api | `isOverdue` + `list(query)` в сервисе, `now` швом в `createTodosService`/`createApp`, валидация `req.query` | 9 новых (20) |
+| web/`api` | `todosApi.list(query)`; query строится вручную, а не `URLSearchParams` | 2 новых (7) |
+| actions | `overdue` в `LoadTodosAction`, `dueDate` в `CreateTodoAction` | — (у соседа нет) |
+| reducers | `state.filter` + `setFilter` (заменяет, не мержит) | 2 новых (9) |
+| sagas | `call(todosApi.list, { overdue })`, `put(setFilter(…))` | — (у соседа нет) |
+| selectors | `selectTodosFilter`, тип `TodosFilter` | — (у соседа нет) |
+| hooks | `filter` в возвращаемом, `load(filter)`, `create(title, dueDate)` | — (у соседа нет) |
+| components | дата-инпут в `TodoForm`, `due …` в `TodoItem`, переключатель в `App` | 4 новых (TodoForm 3, TodoList 3) |
+
+Помимо тестов: `node dist/main.js` + `curl` (`?overdue=true|false`, `?overdue=yes` → 400 с
+`fieldErrors.overdue`, `dueDate: "14/10/2026"` → 400), и живой браузер через vite-прокси:
+переключатель `show overdue` оставляет одну задачу, подпись меняется на `1 overdue`, кнопка — на
+`show all`.
+
+**Гейт из части 1 не воспрепятствовал ни одной правке по конвенциям.** Ни один прогон не стал
+красным из-за слоёв. Единственное место, где он сформулировал решение: `selectTodosFilter` нельзя
+типизировать типом из `reducers/` (`web-selectors → web-reducers` запрещён по `redux.md:56`),
+поэтому `TodosFilter` выводится из `RootState` — `RootState["todos"]["filter"]`. Блокером это не
+стало и, на мой взгляд, вышло лучше: единственный источник правды о форме фильтра — форма стора, а
+не ещё один экспорт. Но зафиксировать стоит: направление слоёв уже диктует, где живёт тип.
+
+### 4.4 Что из отчёта подтвердилось
+
+- Дыра ровно там, где сказано. На `main` (`8661b11`) в `.fallowrc.json` три пакетные зоны, ни одного
+  межслойного правила; A01 и A03 на `main` не ловятся (переснято на `main`, а не на ветке).
+- «Фраза README верна на уровне пакетов и неверна на уровне слоёв» — да: `web → @app/api` ловится
+  и на `main`.
+- 32 теста / 6 файлов (shared 5, api 11, web 16) — совпало дословно; `.github/` на `main` нет;
+  `pre-commit` гоняет `audit` без тестов.
+- `pnpm run audit --force` падало — починено.
+- `pnpm install --frozen-lockfile` → 0, `pnpm dedupe --check` → 0 (переснято на ветке).
+- Кандидат-конфиг зелёный на чистом дереве: ни одной правки в коде не потребовалось.
+- §1.2 про недостижимые файлы — подтверждено (с уточнением в 4.1).
+- Пресеты и `autoDiscover` — подтверждено; не использованы по причинам из §1.3.
+
+### 4.5 Что в отчёте неверно или устарело
+
+1. **`pnpm audit --prod` → «No known vulnerabilities found».** На ветке, где писался отчёт
+   (`fix/catalog-advisories` @ `dd68bda`), — да, проверено в отдельном worktree. Но **этой ветки нет
+   в `main`**: на `main` и на текущей ветке `pnpm audit --prod` даёт **3 уязвимости, 1 critical**
+   (`proxy-addr` 2.0.7 через `express`, GHSA-jqcg-44mw-7w3h) + 2 moderate `qs`. Строка снимка
+   описывает ветку, а не `main`, и в таком виде вводит в заблуждение.
+2. **`pnpm/setup@v1`** — не «младший», а на два мажора старше (`v3.1.1`). Ошибка не «не
+   существует» (тег есть, входы те же), а «устарел».
+3. **`actions/checkout@v5`** — существует, но актуальный мажор `v7`.
+4. **`turborepo.dev/docs/core-concepts/filtering`** — редирект, канонический адрес другой.
+5. **smoke `/health`** — эндпоинта нет.
+6. **Заголовок PR 2 `ci(repo): …` не пройдёт коммитлент этого же репозитория**: в
+   `.commitlintrc.json` `type-enum` = `feat, fix, chore, docs, refactor, test, style, perf` — типа
+   `ci` нет, `ci:` и `ci(repo):` оба отбиты (проверено `pnpm exec commitlint`). Пишется
+   `chore(ci):`, чем коммит `d07979b` и стал.
+7. Мелочь по методике §Приложения: проба правит файл и откатывает его — верно, но без `--force`
+   часть прогонов воспроизводит кэш, и «красный» прогон может оказаться чужим. В харнессе
+   typecheck / Biome / fallow поэтому гонялись отдельными командами.
+
+### 4.6 Открытое
+
+1. **Branch protection** — единственное, чего нельзя закоммитить: `main` ← required check `verify`.
+   Задокументировано в README («The gate»), включается в UI или `gh api`.
+2. **`fix/catalog-advisories` в `main` не влита** — там critical. Отдельное решение владельца,
+   вне этой ветки.
+3. **`/health`** — добавить или вычеркнуть идею из планов.
+4. **A4** — шесть неловимых правил (E04–E09). Дешевле всего Biome-плагинами или архитектурным
+   тестом; ни то, ни другое не решено.
+5. **Dependabot / `catalog:`** — GA из поста подтвердить нельзя, caveat «меняется только
+   лок-файл» не воспроизводили. `.github/dependabot.yml` не заведён.
+6. **`allowTypeOnly` не выставлен ни у одного правила**: `import type` через границу красен так же,
+   как value-импорт (A05). Консервативно и предсказуемо, но если понадобится «тип через границу
+   можно» — это осознанное ослабление, а не баг.
+7. **`selectors/` без тестов** были и остались: по правилу «тесты там, где они есть у соседей»
+   новый `selectTodosFilter` теста не получил. Логика фильтра живёт в сервисе и покрыта.
