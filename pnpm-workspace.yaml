@@ -16,7 +16,7 @@ catalog:
   redux-saga: ^1.5.1
 
   # Backend runtime
-  express: ^5.2.1
+  express: ^5.3.0
 
   # Shared runtime
   zod: ^4.4.3
@@ -29,13 +29,13 @@ catalog:
   "@types/supertest": ^7.2.1
 
   # Bundlers — tsc never emits, see conventions/core.md
-  vite: ^8.2.0
+  vite: ^8.3.4
   "@vitejs/plugin-react": ^6.0.5
   tsup: ^8.5.1
 
   # Test toolchain
-  vitest: ^4.1.10
-  jsdom: ^30.0.1
+  vitest: ^4.1.11
+  jsdom: ^30.1.2
   "@testing-library/react": ^16.3.2
   "@testing-library/jest-dom": ^7.0.0
   jest-styled-components: ^7.4.0
