@@ -6,6 +6,13 @@ name: CI
 #
 # One job, full run, always. Three packages, ~40 tests, two small bundles: filtering to affected
 # packages would cost a fetch-depth, a base ref and a way to be falsely green, and buy seconds.
+#
+# Actions are named by full URL on purpose. A relative `uses: actions/checkout@v7` is resolved
+# against the instance's default actions URL — <https://code.forgejo.org> on a stock Forgejo, not
+# github.com — and that mirror does not carry `pnpm/setup`; it fails with a clone error rather
+# than falling back. Forgejo's own docs recommend fully qualified URLs for the same reason.
+# What this file cannot prove from the inside: the runner must reach github.com, and
+# `runs-on: ubuntu-latest` must match a label the instance's runner declares.
 
 on:
   push:
@@ -17,9 +24,12 @@ on:
 permissions:
   contents: read
 
-# A push to a branch that already has a run in flight makes that run worthless.
+# A push to a branch that already has a run in flight makes that run worthless. The group names
+# the workflow in words: `github.workflow` is not among the contexts Forgejo documents, and an
+# unknown context expands to nothing rather than failing, which would quietly merge every
+# workflow's runs into one group.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -29,7 +39,7 @@ jobs:
     name: verify
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: https://github.com/actions/checkout@v7
         with:
           # Nothing in this workflow pushes, so the runner should not hold a credential that
           # could.
@@ -39,7 +49,7 @@ jobs:
       # this repository claims to support (`engines.node: ">=22"`), and caches the pnpm store
       # against the lockfile hash. `install: false` keeps the install below explicit, so
       # `--frozen-lockfile` stays a visible step rather than an action default.
-      - uses: pnpm/setup@v3
+      - uses: https://github.com/pnpm/setup@v3
         with:
           runtime: node@22
           cache: true
