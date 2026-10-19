@@ -17,7 +17,9 @@ interface TodoListProps {
 
 export const TodoList = memo(function TodoList({ todos, onToggle, onRemove }: TodoListProps) {
   return (
-    <List>
+    // `role="list"` is not decoration: `list-style: none` below makes Chrome and Safari drop the
+    // list semantics, so without it a screen reader announces these todos as loose text.
+    <List role="list">
       {todos.map((todo) => (
         <TodoItem key={todo.id} onRemove={onRemove} onToggle={onToggle} todo={todo} />
       ))}
