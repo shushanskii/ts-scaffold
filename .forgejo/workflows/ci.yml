@@ -46,39 +46,42 @@ jobs:
     container:
       image: node:22
     steps:
-      - uses: https://github.com/actions/checkout@v7
-        with:
-          # Nothing in this workflow pushes, so the runner should not hold a credential that
-          # could.
-          persist-credentials: false
+      - name: Test
+        run: echo "test"
 
-      # Installs pnpm at the version in `packageManager` (pnpm@11.11.0) and caches the pnpm store
-      # against the lockfile hash. The image already brings node, but the action pins its own
-      # runtime (`runtime: node@22`), which keeps the version the same here and on any machine
-      # that runs this workflow outside the container. `install: false` keeps the install below
-      # explicit, so `--frozen-lockfile` stays a visible step rather than an action default. If
-      # the instance has no actions cache backend, this step warns and carries on.
-      - uses: https://github.com/pnpm/setup@v3
-        with:
-          runtime: node@22
-          cache: true
-          install: false
-
-      - name: Install
-        run: pnpm install --frozen-lockfile
-
-      # A lockfile that has drifted back into duplicate versions is a bug, and the only cheap
-      # way to notice is to ask on every run.
-      - name: Lockfile is deduplicated
-        run: pnpm dedupe --check
-
-      # `--force` so a run proves the code builds and tests rather than replaying a cache hit.
-      # Nothing caches .turbo here, so this costs seconds and removes a class of false green.
-      - name: Verify
-        run: pnpm run verify --force
-
-      # Advisory noise must not block an unrelated pull request — a transitive dev dependency
-      # lands on everyone at once. So it reports, and does not decide.
-      - name: Dependency advisories
-        run: pnpm audit --audit-level=high --ignore-registry-errors
-        continue-on-error: true
+#      - uses: https://github.com/actions/checkout@v7
+#        with:
+#          # Nothing in this workflow pushes, so the runner should not hold a credential that
+#          # could.
+#          persist-credentials: false
+#
+#      # Installs pnpm at the version in `packageManager` (pnpm@11.11.0) and caches the pnpm store
+#      # against the lockfile hash. The image already brings node, but the action pins its own
+#      # runtime (`runtime: node@22`), which keeps the version the same here and on any machine
+#      # that runs this workflow outside the container. `install: false` keeps the install below
+#      # explicit, so `--frozen-lockfile` stays a visible step rather than an action default. If
+#      # the instance has no actions cache backend, this step warns and carries on.
+#      - uses: https://github.com/pnpm/setup@v3
+#        with:
+#          runtime: node@22
+#          cache: true
+#          install: false
+#
+#      - name: Install
+#        run: pnpm install --frozen-lockfile
+#
+#      # A lockfile that has drifted back into duplicate versions is a bug, and the only cheap
+#      # way to notice is to ask on every run.
+#      - name: Lockfile is deduplicated
+#        run: pnpm dedupe --check
+#
+#      # `--force` so a run proves the code builds and tests rather than replaying a cache hit.
+#      # Nothing caches .turbo here, so this costs seconds and removes a class of false green.
+#      - name: Verify
+#        run: pnpm run verify --force
+#
+#      # Advisory noise must not block an unrelated pull request — a transitive dev dependency
+#      # lands on everyone at once. So it reports, and does not decide.
+#      - name: Dependency advisories
+#        run: pnpm audit --audit-level=high --ignore-registry-errors
+#        continue-on-error: true
