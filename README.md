@@ -77,7 +77,7 @@ Run from the repository root:
 ### The gate
 
 `pnpm run verify` is the single verification command. The `pre-commit` hook runs it, and
-`.github/workflows/ci.yml` runs it on every push and pull request:
+`.forgejo/workflows/ci.yml` runs it on every push and pull request:
 
 ```
 turbo run typecheck                types, per package

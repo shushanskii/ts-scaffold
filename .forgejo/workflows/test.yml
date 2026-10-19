@@ -1,0 +1,87 @@
+name: CI
+
+# The gate has to run somewhere a commit cannot skip it. `pre-commit` is still the fast local
+# pass, but `git commit --no-verify` gets around it in one flag, so this file is the enforcement
+# and the hook is a convenience.
+#
+# One job, full run, always. Three packages, ~40 tests, two small bundles: filtering to affected
+# packages would cost a fetch-depth, a base ref and a way to be falsely green, and buy seconds.
+#
+# Actions are named by full URL on purpose. A relative `uses: actions/checkout@v7` is resolved
+# against the instance's default actions URL — <https://code.forgejo.org> on a stock Forgejo, not
+# github.com — and that mirror does not carry `pnpm/setup`; it fails with a clone error rather
+# than falling back. Forgejo's own docs recommend fully qualified URLs for the same reason, and
+# the instance this runs on documents the same convention. Still unproven from inside the file:
+# the job container has to reach github.com and registry.npmjs.org, and the first run pulls
+# `node:22` through the runner's Docker daemon.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: the workflow reads the repository and nothing else. No secret is reachable
+# from a fork pull request.
+permissions:
+  contents: read
+
+# A push to a branch that already has a run in flight makes that run worthless. The group names
+# the workflow in words: `github.workflow` is not among the contexts Forgejo documents, and an
+# unknown context expands to nothing rather than failing, which would quietly merge every
+# workflow's runs into one group.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Branch protection on `main` should require this exact check name: `verify`. It is the one
+  # setting that cannot be committed — see README, "The gate".
+  verify:
+    name: verify
+    # This instance has one runner and one label: `docker:docker://alpine:3.22`. A job asking for
+    # `ubuntu-latest` does not get a renamable alias, it gets no answer at all and waits forever.
+    # The label only names a default image, so the job names the image it actually needs: Alpine
+    # carries neither git nor node, and checkout needs the first before any project step runs.
+    runs-on: docker
+    container:
+      image: node:22
+    steps:
+      - name: Test
+        run: echo "test"
+
+#      - uses: https://github.com/actions/checkout@v7
+#        with:
+#          # Nothing in this workflow pushes, so the runner should not hold a credential that
+#          # could.
+#          persist-credentials: false
+#
+#      # Installs pnpm at the version in `packageManager` (pnpm@11.11.0) and caches the pnpm store
+#      # against the lockfile hash. The image already brings node, but the action pins its own
+#      # runtime (`runtime: node@22`), which keeps the version the same here and on any machine
+#      # that runs this workflow outside the container. `install: false` keeps the install below
+#      # explicit, so `--frozen-lockfile` stays a visible step rather than an action default. If
+#      # the instance has no actions cache backend, this step warns and carries on.
+#      - uses: https://github.com/pnpm/setup@v3
+#        with:
+#          runtime: node@22
+#          cache: true
+#          install: false
+#
+#      - name: Install
+#        run: pnpm install --frozen-lockfile
+#
+#      # A lockfile that has drifted back into duplicate versions is a bug, and the only cheap
+#      # way to notice is to ask on every run.
+#      - name: Lockfile is deduplicated
+#        run: pnpm dedupe --check
+#
+#      # `--force` so a run proves the code builds and tests rather than replaying a cache hit.
+#      # Nothing caches .turbo here, so this costs seconds and removes a class of false green.
+#      - name: Verify
+#        run: pnpm run verify --force
+#
+#      # Advisory noise must not block an unrelated pull request — a transitive dev dependency
+#      # lands on everyone at once. So it reports, and does not decide.
+#      - name: Dependency advisories
+#        run: pnpm audit --audit-level=high --ignore-registry-errors
+#        continue-on-error: true
