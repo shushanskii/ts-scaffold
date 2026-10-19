@@ -52,10 +52,14 @@ The `@app` scope and the `Todo` domain exist so the template runs. Both are mean
 6. **Fill in `conventions/project.md`** — it is deliberately close to empty. Package names, the
    package graph, and domain terms belong there, not in the portable layers.
 7. **Update the boundary zones** in `.fallowrc.json` if you add or rename packages. A package with
-   no zone is a package with no enforced boundaries.
+   no zone is a package with no enforced boundaries, and a zone with no rule entry is a zone that
+   restricts nothing — fallow stays green either way as long as nothing currently breaks a rule.
+   `apps/web/src/architecture/index.test.ts` is the trap for that: it asserts the rules the
+   conventions claim, so hollowing the config out is a red test rather than a quiet loss of
+   coverage. Rename the zones there too.
 
-Then `pnpm run audit && pnpm test` should be green. If they are not, a step above was missed — fix
-that rather than building on top of it.
+Then `pnpm run verify` should be green. If it is not, a step above was missed — fix that rather
+than building on top of it.
 
 ## Commands
 
@@ -64,23 +68,35 @@ Run from the repository root:
 | Command | What it does |
 |---|---|
 | `pnpm dev` | service in watch mode + Vite dev server |
-| `pnpm run audit` | **the gate** — typecheck, then Biome, then fallow |
+| `pnpm run verify` | **the gate** — everything below, in one command |
+| `pnpm run audit` | the read-only part of it: typecheck, Biome, fallow |
 | `pnpm test` | Vitest in every package |
 | `pnpm run build` | `tsup` and `vite build` into each app's `dist/` |
 | `pnpm run fix` | Biome auto-fix (format + lint) |
 
 ### The gate
 
-`pnpm run audit` is the single verification command, and the `pre-commit` hook runs it:
+`pnpm run verify` is the single verification command. The `pre-commit` hook runs it, and
+`.github/workflows/ci.yml` runs it on every push and pull request:
 
 ```
-turbo run typecheck              types, per package
-biome check .                    format + lint, whole repo
+turbo run typecheck                types, per package
+biome check .                      format + lint, whole repo
 fallow dead-code --fail-on-issues  dead code, cycles, boundaries, duplicate exports
+turbo run test                     Vitest, per package
+turbo run build                    tsup + vite build
 ```
 
-Green means types, style and structure all pass. `commitlint` separately rejects commit messages
-that are not [Conventional Commits](https://www.conventionalcommits.org/).
+Green means types, style, structure, behaviour and both bundles all pass. Flags you add on the way
+are task-runner flags: `pnpm run verify --force` re-runs the tasks instead of replaying the
+Turborepo cache, which is the only way to watch the gate do the work rather than recall it.
+`commitlint` separately rejects commit messages that are not
+[Conventional Commits](https://www.conventionalcommits.org/).
+
+**A hook is not a gate.** `git commit --no-verify` skips it in one flag, so the workflow is what
+enforces and the hook is only the fast local pass. One setting lives outside the repository:
+require the `verify` check on `main` under branch protection, or a project copied from this
+template starts out unenforced all over again.
 
 ## Layout
 
@@ -94,8 +110,12 @@ apps/web/src/            api/ actions/ reducers/ sagas/
                          store/ selectors/ hooks/ components/   + main.tsx
 ```
 
-Layers only import leftwards, and fallow enforces it. In `apps/web` that means components reach
-state through a hook, never through a reducer; sagas dispatch slice actions, the UI never does.
+Layers only import leftwards, and fallow enforces it: one zone per bucket in `.fallowrc.json`, with
+`coverage.requireAllFiles` so a bucket no zone claims is a red gate instead of an unpoliced one.
+The rules that are calls rather than imports — reading the store with an inline `useSelector`,
+calling `fetch` outside `api/` — are covered by `boundaries.calls.forbidden`. In `apps/web` that
+means components reach state through a hook, never through a reducer; sagas dispatch slice actions,
+the UI never does.
 
 ## Stack
 

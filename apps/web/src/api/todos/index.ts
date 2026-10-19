@@ -1,6 +1,7 @@
 import {
   type CreateTodo,
   type Todo,
+  type TodoListQuery,
   todoListSchema,
   todoSchema,
   type UpdateTodo,
@@ -9,6 +10,16 @@ import type { ZodType } from "zod";
 
 // Vite proxies /api to the service in development — see vite.config.ts.
 const base = "/api/todos";
+
+// Spelled out rather than handed to URLSearchParams, which would drop the distinction between an
+// absent filter and `overdue=false` — the service reads those as two different requests.
+function queryString(query: TodoListQuery): string {
+  if (query.overdue === undefined) {
+    return "";
+  }
+
+  return `?overdue=${query.overdue ? "true" : "false"}`;
+}
 
 // Every response is parsed through a schema. The server is another process that can be redeployed
 // independently, so its output is untrusted input until proven otherwise.
@@ -28,8 +39,8 @@ async function send<T>(schema: ZodType<T>, path: string, init?: RequestInit): Pr
 // Exported as one object rather than loose functions: `create`/`update`/`remove` are verbs every
 // layer wants, and a single named export keeps them from colliding with actions or slice reducers.
 export const todosApi = {
-  list(): Promise<readonly Todo[]> {
-    return send(todoListSchema, base);
+  list(query: TodoListQuery = {}): Promise<readonly Todo[]> {
+    return send(todoListSchema, `${base}${queryString(query)}`);
   },
 
   create(input: CreateTodo): Promise<Todo> {

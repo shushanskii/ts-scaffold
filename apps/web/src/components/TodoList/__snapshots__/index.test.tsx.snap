@@ -1,9 +1,53 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`TodoList > prints a due date only for the todo that has one 1`] = `
+<DocumentFragment>
+  <ul
+    class="sc-hLllbt jFFqoO"
+  >
+    <li
+      class="sc-bcHNtg drpPDx"
+    >
+      <span
+        class="sc-gsMGyr fmfvrX"
+      >
+        file taxes
+      </span>
+      <small
+        class="sc-dkHxwO dRdkJc"
+      >
+        due 2026-10-20
+      </small>
+      <button
+        aria-label="remove file taxes"
+        type="button"
+      >
+        ×
+      </button>
+    </li>
+    <li
+      class="sc-bcHNtg drpPDx"
+    >
+      <span
+        class="sc-gsMGyr fmfvrX"
+      >
+        no deadline
+      </span>
+      <button
+        aria-label="remove no deadline"
+        type="button"
+      >
+        ×
+      </button>
+    </li>
+  </ul>
+</DocumentFragment>
+`;
+
 exports[`TodoList > reports the clicked todo, not just its id 1`] = `
 <DocumentFragment>
   <ul
-    class="sc-dkHxwO bblxwT"
+    class="sc-hLllbt jFFqoO"
   >
     <li
       class="sc-bcHNtg drpPDx"

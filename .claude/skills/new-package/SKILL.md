@@ -119,15 +119,22 @@ matchers, RTL `cleanup` and the styled-components serializer, and `index.html`.
 
 One file outside the package, and it is easy to forget:
 
-**`.fallowrc.json`** — add a zone and a rule. A package with no zone has **no enforced boundaries**,
-and nothing will ever tell you: the gate stays green while the layering rots.
+**`.fallowrc.json`** — add a zone and a rule, per layer rather than per package: one zone per
+bucket under the package's `src/`, each with an `allow` list naming only the buckets it may import.
+A zone with **no rule entry is unrestricted**, so the rule is not optional — and a source file that
+matches no zone is reported by `coverage.requireAllFiles`, which is what stops a new bucket from
+opting out of the rules silently.
 
 ```jsonc
-// boundaries.zones
-{ "name": "<name>", "patterns": ["<packages|apps>/<name>/src/**"] }
-// boundaries.rules — list every zone this one may import, itself included
-{ "from": "<name>", "allow": ["<name>", "<libs it may import>"] }
+// boundaries.zones — one per bucket, plus the entry file
+{ "name": "<name>-<bucket>", "patterns": ["<packages|apps>/<name>/src/<bucket>/**"] }
+// boundaries.rules — list every zone this one may import; a zone may not need itself
+{ "from": "<name>-<bucket>", "allow": ["<zones to its left>", "@<scope>/shared-barrel"] }
 ```
+
+Whatever zones you add, add the matching assertions to
+`apps/web/src/architecture/index.test.ts`: it is the only thing that notices a rule being deleted,
+because fallow is green on any tree that does not currently break one.
 
 You do **not** need to touch `entry`. fallow discovers entry points on its own from bundler configs
 and `package.json` fields; the manual list is a fallback for a runtime root nothing declares. Add
@@ -139,11 +146,11 @@ one only if fallow actually reports your entry file as unused.
 
 ```bash
 pnpm install          # links the workspace and resolves catalog: entries
-pnpm run audit        # typecheck + biome + fallow
-pnpm test
+pnpm run verify       # typecheck + biome + fallow + tests + both builds
 ```
 
-Both must be green before the package is done.
+Green before the package is done. `pnpm run audit` is the read-only half of the same gate — fine
+while iterating, not a substitute for `verify`.
 
 ### What fallow will and will not complain about
 

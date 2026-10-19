@@ -12,7 +12,8 @@
     "test": "turbo run test",
     "lint": "biome check .",
     "deadcode": "fallow dead-code --fail-on-issues",
-    "audit": "turbo run typecheck && biome check . && fallow dead-code --fail-on-issues",
+    "audit": "node scripts/gate.mjs audit",
+    "verify": "node scripts/gate.mjs verify",
     "fix": "biome check --write .",
     "prepare": "husky"
   },

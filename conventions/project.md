@@ -42,7 +42,8 @@ no base URL baked into the client. Point it elsewhere with `API_URL`.
 ## The `@app/*` scope is a placeholder
 
 It exists so the template runs. Renaming it is the first step of starting a real project, along with
-`name` in the root `package.json` and the zone names in `.fallowrc.json`.
+`name` in the root `package.json`, the zone names in `.fallowrc.json`, and the zone names asserted
+in `apps/web/src/architecture/index.test.ts`.
 
 ## The example domain is disposable
 

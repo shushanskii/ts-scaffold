@@ -1,0 +1,65 @@
+name: CI
+
+# The gate has to run somewhere a commit cannot skip it. `pre-commit` is still the fast local
+# pass, but `git commit --no-verify` gets around it in one flag, so this file is the enforcement
+# and the hook is a convenience.
+#
+# One job, full run, always. Three packages, ~40 tests, two small bundles: filtering to affected
+# packages would cost a fetch-depth, a base ref and a way to be falsely green, and buy seconds.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: the workflow reads the repository and nothing else. No secret is reachable
+# from a fork pull request.
+permissions:
+  contents: read
+
+# A push to a branch that already has a run in flight makes that run worthless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Branch protection on `main` should require this exact check name: `verify`. It is the one
+  # setting that cannot be committed — see README, "The gate".
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Nothing in this workflow pushes, so the runner should not hold a credential that
+          # could.
+          persist-credentials: false
+
+      # Installs pnpm at the version in `packageManager` (pnpm@11.11.0) and Node at the version
+      # this repository claims to support (`engines.node: ">=22"`), and caches the pnpm store
+      # against the lockfile hash. `install: false` keeps the install below explicit, so
+      # `--frozen-lockfile` stays a visible step rather than an action default.
+      - uses: pnpm/setup@v3
+        with:
+          runtime: node@22
+          cache: true
+          install: false
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # A lockfile that has drifted back into duplicate versions is a bug, and the only cheap
+      # way to notice is to ask on every run.
+      - name: Lockfile is deduplicated
+        run: pnpm dedupe --check
+
+      # `--force` so a run proves the code builds and tests rather than replaying a cache hit.
+      # Nothing caches .turbo here, so this costs seconds and removes a class of false green.
+      - name: Verify
+        run: pnpm run verify --force
+
+      # Advisory noise must not block an unrelated pull request — a transitive dev dependency
+      # lands on everyone at once. So it reports, and does not decide.
+      - name: Dependency advisories
+        run: pnpm audit --audit-level=high --ignore-registry-errors
+        continue-on-error: true
