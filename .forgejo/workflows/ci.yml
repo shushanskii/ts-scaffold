@@ -10,9 +10,10 @@ name: CI
 # Actions are named by full URL on purpose. A relative `uses: actions/checkout@v7` is resolved
 # against the instance's default actions URL — <https://code.forgejo.org> on a stock Forgejo, not
 # github.com — and that mirror does not carry `pnpm/setup`; it fails with a clone error rather
-# than falling back. Forgejo's own docs recommend fully qualified URLs for the same reason.
-# What this file cannot prove from the inside: the runner must reach github.com, and
-# `runs-on: ubuntu-latest` must match a label the instance's runner declares.
+# than falling back. Forgejo's own docs recommend fully qualified URLs for the same reason, and
+# the instance this runs on documents the same convention. Still unproven from inside the file:
+# the job container has to reach github.com and registry.npmjs.org, and the first run pulls
+# `node:22` through the runner's Docker daemon.
 
 on:
   push:
@@ -37,7 +38,13 @@ jobs:
   # setting that cannot be committed — see README, "The gate".
   verify:
     name: verify
-    runs-on: ubuntu-latest
+    # This instance has one runner and one label: `docker:docker://alpine:3.22`. A job asking for
+    # `ubuntu-latest` does not get a renamable alias, it gets no answer at all and waits forever.
+    # The label only names a default image, so the job names the image it actually needs: Alpine
+    # carries neither git nor node, and checkout needs the first before any project step runs.
+    runs-on: docker
+    container:
+      image: node:22
     steps:
       - uses: https://github.com/actions/checkout@v7
         with:
@@ -45,10 +52,12 @@ jobs:
           # could.
           persist-credentials: false
 
-      # Installs pnpm at the version in `packageManager` (pnpm@11.11.0) and Node at the version
-      # this repository claims to support (`engines.node: ">=22"`), and caches the pnpm store
-      # against the lockfile hash. `install: false` keeps the install below explicit, so
-      # `--frozen-lockfile` stays a visible step rather than an action default.
+      # Installs pnpm at the version in `packageManager` (pnpm@11.11.0) and caches the pnpm store
+      # against the lockfile hash. The image already brings node, but the action pins its own
+      # runtime (`runtime: node@22`), which keeps the version the same here and on any machine
+      # that runs this workflow outside the container. `install: false` keeps the install below
+      # explicit, so `--frozen-lockfile` stays a visible step rather than an action default. If
+      # the instance has no actions cache backend, this step warns and carries on.
       - uses: https://github.com/pnpm/setup@v3
         with:
           runtime: node@22
