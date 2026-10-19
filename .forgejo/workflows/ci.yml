@@ -47,7 +47,7 @@ jobs:
       image: node:22
     steps:
       - name: Test
-        run: echo "test"
+        run: echo "Hello, world!"
 
 #      - uses: https://github.com/actions/checkout@v7
 #        with:
