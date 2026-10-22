@@ -1,0 +1,72 @@
+# The static bundle and the Caddy that serves it (Dockerfile.web, deploy/Caddyfile).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  labels:
+    app.kubernetes.io/name: ts-scaffold
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: ts-scaffold
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ts-scaffold
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ts-scaffold
+        app.kubernetes.io/component: web
+    spec:
+      containers:
+        - name: web
+          image: git.rezolver-zero.com/developer/ts-scaffolding/web:g014a9fc8
+          ports:
+            - name: http
+              containerPort: 8080
+          # The probe asks for /, which is index.html: an HTTP response from the file server is the
+          # readiness this container has — there is no dependency to wait for.
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            # Not runAsNonRoot, and that is a gap rather than a decision: the caddy image runs as
+            # root and writes to /data (its certificate storage, unused here but created on start),
+            # so uid 101 needs an emptyDir with the right group. Worth doing; doing it blind in the
+            # middle of a first deploy is how a working app becomes a CrashLoopBackOff.
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 500m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  labels:
+    app.kubernetes.io/name: ts-scaffold
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: ts-scaffold
+spec:
+  selector:
+    app.kubernetes.io/name: ts-scaffold
+    app.kubernetes.io/component: web
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
