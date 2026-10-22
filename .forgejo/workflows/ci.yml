@@ -107,8 +107,9 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: docker
     container:
-      # The label's default image is Alpine with neither docker nor git, and a build needs both.
-      # `docker_host: automount` in the runner config puts the host daemon's socket into the job.
+      # The label's default image is Alpine with neither docker nor node, and this job needs both —
+      # plus the git the first step installs. `docker_host: automount` in the runner config puts the
+      # host daemon's socket into the job.
       image: docker:28
     env:
       REGISTRY: git.rezolver-zero.com
@@ -116,18 +117,18 @@ jobs:
       # segment is what makes the package appear in this repository's Packages tab on its own.
       IMAGE_PREFIX: git.rezolver-zero.com/developer/ts-scaffolding
     steps:
+      # Node and git, before anything asks for them. `actions/checkout` is a JavaScript action and the
+      # runner executes it with the **job container's** node, so the container has to own node before
+      # the checkout step runs: with only the docker CLI in the image the failure lands inside the
+      # checkout itself — `exec: "node": executable file not found in $PATH`, and the runner's hint
+      # points at act issue 107. git is what checkout clones with; without it the action falls back
+      # to a tarball download that quietly leaves no .git behind.
+      - name: Toolchain for the checkout action
+        run: apk add --no-cache git nodejs
+
       - uses: https://github.com/actions/checkout@v7
         with:
           persist-credentials: false
-
-      # Node and git, before any action runs. `actions/checkout` is a JavaScript action, and the
-      # runner executes it with the **job container's** node — a container holding only the docker
-      # CLI fails on the checkout step itself with `exec: "node": executable file not found in
-      # $PATH` (act issue 107 is the upstream note this error points at). git is what checkout
-      # clones with, and without it the action silently falls back to a tarball download that leaves
-      # no .git behind — a behaviour to choose, not to drift into.
-      - name: Toolchain for the checkout action
-        run: apk add --no-cache git nodejs
 
       - name: Login
         # Credentials arrive as env, not as command-line arguments: a token in `docker login -p`
