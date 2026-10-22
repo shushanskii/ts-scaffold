@@ -26,7 +26,7 @@ spec:
         fsGroup: 101
       containers:
         - name: web
-          image: git.rezolver-zero.com/developer/ts-scaffolding/web:g4c15b973
+          image: git.rezolver-zero.com/developer/ts-scaffolding/web:gadbb33f1
           ports:
             - name: http
               containerPort: 8080

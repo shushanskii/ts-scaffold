@@ -28,7 +28,7 @@ spec:
         - name: api
           # The tag is the release. CI publishes g<short-sha> per commit and nothing else, so this
           # line is the whole deployment decision and a rollout is a one-line commit.
-          image: git.rezolver-zero.com/developer/ts-scaffolding/api:g4c15b973
+          image: git.rezolver-zero.com/developer/ts-scaffolding/api:gadbb33f1
           ports:
             - name: http
               containerPort: 3000
