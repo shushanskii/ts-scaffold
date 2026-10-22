@@ -20,8 +20,12 @@ RUN corepack enable
 # @app/shared is published as raw TypeScript (its exports field points at ./src/index.ts), so the
 # builder needs its sources, not only its manifest — this is the same reason the API bundles it.
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
-COPY packages/shared/package.json packages/shared/tsconfig.json packages/shared/src packages/shared/
+COPY packages/shared/package.json packages/shared/tsconfig.json packages/shared/
 COPY apps/web/package.json apps/web/tsconfig.json apps/web/vite.config.ts apps/web/index.html apps/web/
+# A directory source of COPY contributes its contents, not itself: merging this line into the COPY
+# above drops shared's sources into packages/shared/ instead of packages/shared/src/, and the
+# bundler then reports `failed to resolve import "@app/shared"` — three layers from the cause.
+COPY packages/shared/src packages/shared/src
 COPY apps/web/src apps/web/src
 RUN pnpm install --frozen-lockfile
 # The assertion belongs here for the same reason it does in Dockerfile.api: a `--filter` that matches
