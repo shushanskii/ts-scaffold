@@ -120,11 +120,14 @@ jobs:
         with:
           persist-credentials: false
 
-      # The docker image ships the CLI and no git. checkout would fall back to downloading a tarball
-      # without it — which works, and quietly leaves no .git behind — so the dependency is stated
-      # rather than absorbed.
-      - name: git
-        run: apk add --no-cache git
+      # Node and git, before any action runs. `actions/checkout` is a JavaScript action, and the
+      # runner executes it with the **job container's** node — a container holding only the docker
+      # CLI fails on the checkout step itself with `exec: "node": executable file not found in
+      # $PATH` (act issue 107 is the upstream note this error points at). git is what checkout
+      # clones with, and without it the action silently falls back to a tarball download that leaves
+      # no .git behind — a behaviour to choose, not to drift into.
+      - name: Toolchain for the checkout action
+        run: apk add --no-cache git nodejs
 
       - name: Login
         # Credentials arrive as env, not as command-line arguments: a token in `docker login -p`
