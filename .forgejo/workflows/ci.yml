@@ -20,20 +20,24 @@ name: CI
 # fully qualified actions were proven by runs on 2026-10-20.
 
 on:
-  # TEMPORARY — no branch filter. The docs define the absence of `branches` as "any branch", which
-  # needs no assumption about how much glob syntax this instance's filter understands. The shape to
-  # restore before merge is `push: { branches: [main] }`.
+  # `main` only. A branch push that builds an image produces a tag for a commit that may never land,
+  # and every such tag is two images on the host that runs the registry; pull requests are gated by
+  # the trigger below, so a branch still gets its verify run before anything merges.
   push:
+    branches: [main]
     # Neither a README nor a cluster manifest changes what goes into an image, and one build
-    # publishes two of them onto a host with 5 GB free. `deploy/` is deliberately absent from this
-    # list: the web image copies deploy/Caddyfile into itself, so a change there is a change to an
-    # image and has to build.
+    # publishes two of them onto the host that stores them. `deploy/` is deliberately absent from
+    # this list: the web image copies deploy/Caddyfile into itself, so a change there is a change to
+    # an image and has to build. `.forgejo/` is present because this file changes what runs, never
+    # what is compiled — a commit that only edits the pipeline should not cost 350 MB.
     paths-ignore:
       - "k8s/**"
       - "**.md"
+      - ".forgejo/**"
   pull_request:
   # Manual run from the Actions UI, or POST /repos/{owner}/{repo}/actions/workflows/{name}/dispatches.
-  # This one stays after the test: it is how a registry push gets retried without an empty commit.
+  # This one stays after the test: it is how a registry push gets retried without an empty commit,
+  # and how a branch that is not `main` builds an image on purpose.
   workflow_dispatch:
 
 # Least privilege: the workflow reads the repository and nothing else. No secret is reachable

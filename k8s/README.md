@@ -13,7 +13,7 @@ ingress.yaml         one host, two backends: /api → api, / → web
 
 ## Cutting a release
 
-CI publishes `g<short-sha>` per commit to `git.rezolver-zero.com/developer/ts-scaffolding/{api,web}`
+CI publishes `g<short-sha>` per commit to `main` at `git.rezolver-zero.com/developer/ts-scaffolding/{api,web}`
 and nothing else. A release is therefore **two lines**: the `image:` tag in `api.yaml` and in
 `web.yaml`. Argo CD notices the commit, syncs, and the rollout waits for the readiness probes
 (`/health` on the API, `/` on the web) before it takes the old pod away.
