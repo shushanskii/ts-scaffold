@@ -20,8 +20,10 @@ name: CI
 # fully qualified actions were proven by runs on 2026-10-20.
 
 on:
+  # TEMPORARY — no branch filter. The docs define the absence of `branches` as "any branch", which
+  # needs no assumption about how much glob syntax this instance's filter understands. The shape to
+  # restore before merge is `push: { branches: [main] }`.
   push:
-    branches: [main]
   pull_request:
   # Manual run from the Actions UI, or POST /repos/{owner}/{repo}/actions/workflows/{name}/dispatches.
   # This one stays after the test: it is how a registry push gets retried without an empty commit.
