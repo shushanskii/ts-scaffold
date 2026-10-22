@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: git.rezolver-zero.com/developer/ts-scaffolding/web:g014a9fc8
+          image: git.rezolver-zero.com/developer/ts-scaffolding/web:g8b7b3caa
           ports:
             - name: http
               containerPort: 8080
