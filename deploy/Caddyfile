@@ -1,0 +1,45 @@
+# Serves the built SPA. This file is copied into the web image by Dockerfile.web; it is not the
+# gateway's Caddyfile, and the two do not import each other — one directory is a public edge with
+# certificates, this one is a static file server behind Traefik.
+#
+# Cluster Caddy comes from `caddy:alpine` (2.11 at the time of writing), the gateway pins its own
+# version; both speak this syntax, which is the reason the web image is Caddy and not nginx.
+
+{
+	# 8080 rather than 80: a container should not need a privileged port, and the cluster reaches it
+	# through a Service, so the number is ours to choose.
+	srv0 :8080
+
+	# No admin API: nothing inside the cluster is going to reconfigure this server, and an open port
+	# 2019 is a way for a pod to be edited by a neighbour.
+	admin off
+}
+
+:8080 {
+	root * /srv
+
+	# Compression by content type, so the 325 kB chunk goes out at roughly a tenth of its size
+	# without anyone remembering to list a mime type.
+	encode zstd gzip
+
+	# The chunk name carries its content hash (index-XOEucMfC.js), so it may be cached for a year;
+	# index.html is the only thing that can go stale, and it is what the browser has to re-read to
+	# notice a deploy at all.
+	header /assets/* Cache-Control "public, max-age=31536000, immutable"
+
+	# / and /index.html are the same object and need the same answer, so the matcher is a path group
+	# rather than a bare path — `header /index.html ...` would not cover a request for /.
+	@index path / /index.html
+	header @index Cache-Control "no-cache"
+
+	# Deep links. A reload on /todos/1 asks the server for a file that does not exist, and without
+	# this line the answer is a 404 from Caddy instead of the SPA that would render the page.
+	try_files {http.request.uri.path} /index.html
+
+	file_server
+
+	# /api is deliberately absent. The client calls the relative /api/todos, and who turns that into a
+	# request the API understands is a decision with exactly one answer to be written down once — in
+	# the API's routing, or in a Traefik middleware. A third copy here is how the dev proxy and
+	# production stop matching.
+}

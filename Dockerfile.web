@@ -1,0 +1,38 @@
+# syntax=docker/dockerfile:1
+
+# The web image: a Vite bundle and something to serve it with.
+#
+# `vite build` produces files, not a process — index.html plus one hashed chunk. Files need a
+# server to become HTTP responses, and in this cluster every responder is a container, so the
+# runtime stage is a web server image with the bundle dropped into it. Traefik routes requests to
+# the pod; it does not read files off a disk.
+#
+# The server is Caddy because the gateway already runs Caddy, so the two places a request is routed
+# speak one syntax. nginx-unprivileged would be an equally correct choice, at the cost of a second
+# config language in the lab and the gain of running as uid 101 without asking.
+
+# ---- build -------------------------------------------------------------------------------------
+FROM node:22 AS build
+WORKDIR /ws
+# The version comes from `packageManager`; no terminal to ask before downloading it.
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable
+# @app/shared is published as raw TypeScript (its exports field points at ./src/index.ts), so the
+# builder needs its sources, not only its manifest — this is the same reason the API bundles it.
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
+COPY packages/shared/package.json packages/shared/tsconfig.json packages/shared/src packages/shared/
+COPY apps/web/package.json apps/web/tsconfig.json apps/web/vite.config.ts apps/web/index.html apps/web/
+COPY apps/web/src apps/web/src
+RUN pnpm install --frozen-lockfile
+# The assertion belongs here for the same reason it does in Dockerfile.api: a `--filter` that matches
+# nothing exits 0.
+RUN pnpm --filter @app/web run build \
+ && test -f apps/web/dist/index.html
+
+# ---- runtime -----------------------------------------------------------------------------------
+FROM caddy:alpine
+# No HEALTHCHECK: a container's readiness is a probe in the cluster manifest, and a second answer to
+# that question in a second place is how the two get to disagreeing.
+COPY deploy/Caddyfile /etc/caddy/Caddyfile
+COPY --from=build /ws/apps/web/dist /srv
+EXPOSE 8080
