@@ -36,8 +36,9 @@ Three packages, one per shape a real project needs. Boundaries are enforced by t
 ## Running both apps
 
 `pnpm dev` starts the service on `:3000` and the Vite dev server on `:5173`. The browser talks to
-`/api/*`, which `vite.config.ts` proxies to the service with the prefix stripped — so no CORS, and
-no base URL baked into the client. Point it elsewhere with `API_URL`.
+`/api/*`, which `vite.config.ts` proxies to the path unchanged — the service mounts `/api` itself,
+so the URL a component sends is the URL the deployment routes, and a routing rule in front of it
+needs no rewrite. No CORS, and no base URL baked into the client. Point it elsewhere with `API_URL`.
 
 ## The `@app/*` scope is a placeholder
 

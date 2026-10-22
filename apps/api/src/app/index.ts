@@ -1,4 +1,5 @@
 import express, { type Express } from "express";
+import { createHealthRouter } from "#routes/health";
 import { createTodosRouter } from "#routes/todos";
 import { createTodosService, type TodosService } from "#services/todos";
 
@@ -16,7 +17,13 @@ export function createApp(
   const app = express();
 
   app.use(express.json());
-  app.use("/todos", createTodosRouter(service));
+  // The prefix belongs to the service, not to the routing in front of it: the same URL the browser
+  // types reaches the same process in development, through the Ingress and behind a reverse proxy.
+  // `vite.config.ts` proxies `/api` without rewriting it, and an Ingress route matches on the same
+  // prefix — a prefix stripped in one place only is the version of this app that works on a laptop
+  // and nowhere else.
+  app.use("/api/todos", createTodosRouter(service));
+  app.use("/health", createHealthRouter());
 
   return app;
 }

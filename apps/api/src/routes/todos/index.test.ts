@@ -16,26 +16,26 @@ beforeEach(() => {
 
 async function seedTodo(title: string, dueDate?: string) {
   const response = await request(app)
-    .post("/todos")
+    .post("/api/todos")
     .send(dueDate === undefined ? { title } : { title, dueDate });
   return response.body;
 }
 
-describe("GET /todos", () => {
+describe("GET /api/todos", () => {
   it("starts empty and lists what was created", async () => {
-    const empty = await request(app).get("/todos");
+    const empty = await request(app).get("/api/todos");
 
     expect(empty.status).toBe(200);
     expect(empty.body).toEqual([]);
 
     const created = await seedTodo("read the conventions");
-    const listed = await request(app).get("/todos");
+    const listed = await request(app).get("/api/todos");
 
     expect(listed.body).toEqual([created]);
   });
 });
 
-describe("GET /todos?overdue", () => {
+describe("GET /api/todos?overdue", () => {
   // Seeded around TODAY: past, today, future, none, and one already finished.
   async function seedOneOfEach() {
     const overdue = await seedTodo("yesterday", "2026-10-13");
@@ -44,7 +44,7 @@ describe("GET /todos?overdue", () => {
     const undated = await seedTodo("no deadline");
     const seededDone = await seedTodo("finished late", "2026-10-01");
     const doneResponse = await request(app)
-      .patch(`/todos/${seededDone.id}`)
+      .patch(`/api/todos/${seededDone.id}`)
       .send({ status: TodoStatus.Done });
 
     // The list returns the todo as it is now, so the fixture has to carry the patched copy.
@@ -54,7 +54,7 @@ describe("GET /todos?overdue", () => {
   it("answers with the whole list when the filter is absent", async () => {
     const seeded = await seedOneOfEach();
 
-    const listed = await request(app).get("/todos");
+    const listed = await request(app).get("/api/todos");
 
     expect(listed.body).toEqual(Object.values(seeded));
   });
@@ -63,7 +63,7 @@ describe("GET /todos?overdue", () => {
   it("filters to active todos whose deadline has passed", async () => {
     const { overdue } = await seedOneOfEach();
 
-    const listed = await request(app).get("/todos?overdue=true");
+    const listed = await request(app).get("/api/todos?overdue=true");
 
     expect(listed.status).toBe(200);
     expect(listed.body).toEqual([overdue]);
@@ -72,14 +72,14 @@ describe("GET /todos?overdue", () => {
   it("filters the other way when asked for overdue=false", async () => {
     const { dueToday, future, undated, done } = await seedOneOfEach();
 
-    const listed = await request(app).get("/todos?overdue=false");
+    const listed = await request(app).get("/api/todos?overdue=false");
 
     expect(listed.body).toEqual([dueToday, future, undated, done]);
   });
 
   // `?overdue=yes` is a client bug. Coercing it would answer "here is everything" and hide it.
   it("400s on a filter it cannot spell", async () => {
-    const response = await request(app).get("/todos?overdue=yes");
+    const response = await request(app).get("/api/todos?overdue=yes");
 
     expect(response.status).toBe(400);
     expect(response.body.error).toBe("invalid query string");
@@ -87,27 +87,29 @@ describe("GET /todos?overdue", () => {
   });
 });
 
-describe("GET /todos/:id", () => {
+describe("GET /api/todos/:id", () => {
   it("returns a single todo", async () => {
     const created = await seedTodo("read the conventions");
 
-    const response = await request(app).get(`/todos/${created.id}`);
+    const response = await request(app).get(`/api/todos/${created.id}`);
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual(created);
   });
 
   it("404s on an unknown id", async () => {
-    const response = await request(app).get("/todos/missing");
+    const response = await request(app).get("/api/todos/missing");
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ error: "todo not found" });
   });
 });
 
-describe("POST /todos", () => {
+describe("POST /api/todos", () => {
   it("creates an active todo and trims the title", async () => {
-    const response = await request(app).post("/todos").send({ title: "  read the conventions  " });
+    const response = await request(app)
+      .post("/api/todos")
+      .send({ title: "  read the conventions  " });
 
     expect(response.status).toBe(201);
     expect(response.body).toMatchObject({
@@ -118,7 +120,7 @@ describe("POST /todos", () => {
   });
 
   it("400s on a blank title", async () => {
-    const response = await request(app).post("/todos").send({ title: "  " });
+    const response = await request(app).post("/api/todos").send({ title: "  " });
 
     expect(response.status).toBe(400);
     expect(response.body.error).toBe("invalid request body");
@@ -127,7 +129,7 @@ describe("POST /todos", () => {
 
   it("stores the due date it is given", async () => {
     const response = await request(app)
-      .post("/todos")
+      .post("/api/todos")
       .send({ title: "file taxes", dueDate: TODAY });
 
     expect(response.status).toBe(201);
@@ -136,7 +138,7 @@ describe("POST /todos", () => {
 
   it("400s on a due date that is not a calendar date", async () => {
     const response = await request(app)
-      .post("/todos")
+      .post("/api/todos")
       .send({ title: "file taxes", dueDate: "14/10/2026" });
 
     expect(response.status).toBe(400);
@@ -144,12 +146,12 @@ describe("POST /todos", () => {
   });
 });
 
-describe("PATCH /todos/:id", () => {
+describe("PATCH /api/todos/:id", () => {
   it("updates status and leaves the title alone", async () => {
     const created = await seedTodo("read the conventions");
 
     const response = await request(app)
-      .patch(`/todos/${created.id}`)
+      .patch(`/api/todos/${created.id}`)
       .send({ status: TodoStatus.Done });
 
     expect(response.status).toBe(200);
@@ -159,7 +161,9 @@ describe("PATCH /todos/:id", () => {
   it("400s on an unknown status", async () => {
     const created = await seedTodo("read the conventions");
 
-    const response = await request(app).patch(`/todos/${created.id}`).send({ status: "archived" });
+    const response = await request(app)
+      .patch(`/api/todos/${created.id}`)
+      .send({ status: "archived" });
 
     expect(response.status).toBe(400);
     expect(response.body.fieldErrors.status).toBeDefined();
@@ -168,7 +172,7 @@ describe("PATCH /todos/:id", () => {
   it("400s on an empty body", async () => {
     const created = await seedTodo("read the conventions");
 
-    const response = await request(app).patch(`/todos/${created.id}`).send({});
+    const response = await request(app).patch(`/api/todos/${created.id}`).send({});
 
     expect(response.status).toBe(400);
     // The "at least one field" rule is a schema-level refinement, so it lands in formErrors.
@@ -180,7 +184,7 @@ describe("PATCH /todos/:id", () => {
   it("sets a due date on its own", async () => {
     const created = await seedTodo("read the conventions");
 
-    const response = await request(app).patch(`/todos/${created.id}`).send({ dueDate: TODAY });
+    const response = await request(app).patch(`/api/todos/${created.id}`).send({ dueDate: TODAY });
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ ...created, dueDate: TODAY });
@@ -190,11 +194,13 @@ describe("PATCH /todos/:id", () => {
   it("clears a deadline on dueDate null and leaves it when the key is absent", async () => {
     const created = await seedTodo("read the conventions", TODAY);
 
-    const retitled = await request(app).patch(`/todos/${created.id}`).send({ title: "renamed" });
+    const retitled = await request(app)
+      .patch(`/api/todos/${created.id}`)
+      .send({ title: "renamed" });
 
     expect(retitled.body).toEqual({ ...created, title: "renamed", dueDate: TODAY });
 
-    const cleared = await request(app).patch(`/todos/${created.id}`).send({ dueDate: null });
+    const cleared = await request(app).patch(`/api/todos/${created.id}`).send({ dueDate: null });
 
     expect(cleared.status).toBe(200);
     expect(cleared.body.dueDate).toBeUndefined();
@@ -204,7 +210,7 @@ describe("PATCH /todos/:id", () => {
     const created = await seedTodo("read the conventions");
 
     const response = await request(app)
-      .patch(`/todos/${created.id}`)
+      .patch(`/api/todos/${created.id}`)
       .send({ dueDate: "sometime in october" });
 
     expect(response.status).toBe(400);
@@ -212,27 +218,27 @@ describe("PATCH /todos/:id", () => {
   });
 
   it("404s on an unknown id", async () => {
-    const response = await request(app).patch("/todos/missing").send({ title: "whatever" });
+    const response = await request(app).patch("/api/todos/missing").send({ title: "whatever" });
 
     expect(response.status).toBe(404);
   });
 });
 
-describe("DELETE /todos/:id", () => {
+describe("DELETE /api/todos/:id", () => {
   it("removes the todo and answers 204", async () => {
     const created = await seedTodo("read the conventions");
 
-    const response = await request(app).delete(`/todos/${created.id}`);
+    const response = await request(app).delete(`/api/todos/${created.id}`);
 
     expect(response.status).toBe(204);
 
-    const listed = await request(app).get("/todos");
+    const listed = await request(app).get("/api/todos");
 
     expect(listed.body).toEqual([]);
   });
 
   it("404s on an unknown id", async () => {
-    const response = await request(app).delete("/todos/missing");
+    const response = await request(app).delete("/api/todos/missing");
 
     expect(response.status).toBe(404);
   });

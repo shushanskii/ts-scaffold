@@ -24,6 +24,13 @@ on:
   # needs no assumption about how much glob syntax this instance's filter understands. The shape to
   # restore before merge is `push: { branches: [main] }`.
   push:
+    # Neither a README nor a cluster manifest changes what goes into an image, and one build
+    # publishes two of them onto a host with 5 GB free. `deploy/` is deliberately absent from this
+    # list: the web image copies deploy/Caddyfile into itself, so a change there is a change to an
+    # image and has to build.
+    paths-ignore:
+      - "k8s/**"
+      - "**.md"
   pull_request:
   # Manual run from the Actions UI, or POST /repos/{owner}/{repo}/actions/workflows/{name}/dispatches.
   # This one stays after the test: it is how a registry push gets retried without an empty commit.
