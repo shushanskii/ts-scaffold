@@ -46,9 +46,11 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 20
           securityContext:
-            # The image ends with USER node (uid 1000); asserting it here means a future Dockerfile
-            # that drops that line fails to schedule instead of quietly running as root.
+            # The image ends with USER node; a name is not enough for Kubernetes to verify that, so
+            # the uid is spelled out — without it the pod sits in CreateContainerConfigError with
+            # "image has non-numeric user (node), cannot verify user is non-root".
             runAsNonRoot: true
+            runAsUser: 1000
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:

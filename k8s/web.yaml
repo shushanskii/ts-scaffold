@@ -39,13 +39,17 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 20
           securityContext:
-            allowPrivilegeEscalation: false
+            # No allowPrivilegeEscalation here, and that is not an oversight: /usr/bin/caddy in the
+            # official image carries the file capability cap_net_bind_service (`getcap` shows it), and
+            # no_new_privs — which that flag turns on — makes execve of a file-capability binary fail.
+            # The symptom is a container that never starts, `exec /usr/bin/caddy: operation not
+            # permitted`, and nothing in the manifest looks wrong. Dropping capabilities is still
+            # worth its line; binding below 1024 is not, since this server listens on 8080.
             capabilities:
               drop: ["ALL"]
-            # Not runAsNonRoot, and that is a gap rather than a decision: the caddy image runs as
-            # root and writes to /data (its certificate storage, unused here but created on start),
-            # so uid 101 needs an emptyDir with the right group. Worth doing; doing it blind in the
-            # middle of a first deploy is how a working app becomes a CrashLoopBackOff.
+            # Not runAsNonRoot either: the image is root, and uid 101 would need /data (Caddy's
+            # storage) to arrive writable, which is an emptyDir with the right group and a decision of
+            # its own. Static files do not need it today; it is still owed.
           resources:
             requests:
               cpu: 10m

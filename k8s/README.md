@@ -37,6 +37,8 @@ where they live rather than repeated here.
 
 ## Known gap
 
-The web pod runs as root. `caddy:alpine` does, and its certificate storage under `/data` has to be
-writable before uid 101 can take over. The comment in `web.yaml` says what the fix costs; it is not
-urgent while the container serves static files, and it is not acceptable forever.
+The web pod runs as root. Two things stand in the way and both are recorded where they bite: the
+official Caddy binary carries the file capability `cap_net_bind_service`, so `no_new_privs` (set by
+`allowPrivilegeEscalation: false`) makes its exec fail; and uid 101 needs `/data`, Caddy's storage,
+to arrive writable. Neither is urgent while the container serves static files, and neither is
+acceptable forever.
