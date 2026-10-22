@@ -35,11 +35,20 @@ Four things outside this directory, each of which fails with a message that name
 The Ingress carries no `tls:` and the manifests carry no pull secret; both decisions are explained
 where they live rather than repeated here.
 
-## Known gap
+## What the pods are hardened against
 
-The web pod runs as root. Two things stand in the way, both recorded where they bite: the official
-Caddy binary carries the file capability `cap_net_bind_service`, which means the capability must stay
-in the container's bounding set or the binary is never executed (`EPERM` from `execve`, and a pod that
-reports `operation not permitted`); and uid 101 would need `/data`, Caddy's storage, to arrive
-writable. Neither is urgent while the container serves static files, and neither is acceptable
-forever.
+Both containers run as a numeric uid, with every capability dropped, no privilege escalation and a
+read-only root filesystem. Two facts make that non-obvious in this pair of images, and each is
+written down where it bites:
+
+- `/usr/bin/caddy` in the official image carries the file capability `cap_net_bind_service`, and a
+  binary whose file capabilities name something outside the process's bounding set is never executed
+  at all. `Dockerfile.web` strips that xattr, and that is what buys `drop: ["ALL"]` and
+  `runAsUser: 101` for the pod.
+- Caddy writes two things on every start whatever it serves: certificate storage under `/data` and
+  `/config/caddy/autosave.json`. Under a read-only root each is an error line unless it arrives as an
+  `emptyDir` with `fsGroup: 101` to make the group write it.
+
+No step in CI checks any of this. A manifest that cannot schedule is caught by the cluster and only
+by the cluster, which is why `kubectl kustomize k8s` before committing is the cheap half of the
+check and the Argo CD health status is the real one.
