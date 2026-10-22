@@ -37,8 +37,9 @@ where they live rather than repeated here.
 
 ## Known gap
 
-The web pod runs as root. Two things stand in the way and both are recorded where they bite: the
-official Caddy binary carries the file capability `cap_net_bind_service`, so `no_new_privs` (set by
-`allowPrivilegeEscalation: false`) makes its exec fail; and uid 101 needs `/data`, Caddy's storage,
-to arrive writable. Neither is urgent while the container serves static files, and neither is
-acceptable forever.
+The web pod runs as root. Two things stand in the way, both recorded where they bite: the official
+Caddy binary carries the file capability `cap_net_bind_service`, which means the capability must stay
+in the container's bounding set or the binary is never executed (`EPERM` from `execve`, and a pod that
+reports `operation not permitted`); and uid 101 would need `/data`, Caddy's storage, to arrive
+writable. Neither is urgent while the container serves static files, and neither is acceptable
+forever.

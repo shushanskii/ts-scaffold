@@ -39,14 +39,22 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 20
           securityContext:
-            # No allowPrivilegeEscalation here, and that is not an oversight: /usr/bin/caddy in the
-            # official image carries the file capability cap_net_bind_service (`getcap` shows it), and
-            # no_new_privs — which that flag turns on — makes execve of a file-capability binary fail.
-            # The symptom is a container that never starts, `exec /usr/bin/caddy: operation not
-            # permitted`, and nothing in the manifest looks wrong. Dropping capabilities is still
-            # worth its line; binding below 1024 is not, since this server listens on 8080.
+            # All capabilities dropped, one kept, and the one kept is not about binding a port —
+            # this server listens on 8080. /usr/bin/caddy in the official image carries the file
+            # capability cap_net_bind_service (`getcap /usr/bin/caddy`), and a binary whose file
+            # capabilities include something outside the process's bounding set is not executed at
+            # all: execve answers EPERM and the pod says `exec /usr/bin/caddy: operation not
+            # permitted` without ever reaching the config. So NET_BIND_SERVICE goes back into the
+            # set, and everything else stays dropped.
+            #
+            # Reproduce without a cluster: docker run --rm --cap-drop ALL --entrypoint caddy <image>
+            # version — add --cap-add NET_BIND_SERVICE and it prints a version.
             capabilities:
               drop: ["ALL"]
+              add: ["NET_BIND_SERVICE"]
+            # No allowPrivilegeEscalation either: it sets no_new_privs, and the same file capability
+            # that needs the bounding set is what no_new_privs refuses an exec of.
+            #
             # Not runAsNonRoot either: the image is root, and uid 101 would need /data (Caddy's
             # storage) to arrive writable, which is an emptyDir with the right group and a decision of
             # its own. Static files do not need it today; it is still owed.
