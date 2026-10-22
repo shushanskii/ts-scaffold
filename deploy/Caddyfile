@@ -6,15 +6,15 @@
 # version; both speak this syntax, which is the reason the web image is Caddy and not nginx.
 
 {
-	# 8080 rather than 80: a container should not need a privileged port, and the cluster reaches it
-	# through a Service, so the number is ours to choose.
-	srv0 :8080
-
 	# No admin API: nothing inside the cluster is going to reconfigure this server, and an open port
 	# 2019 is a way for a pod to be edited by a neighbour.
 	admin off
 }
 
+# 8080 rather than 80: a container should not need a privileged port, and the cluster reaches it
+# through a Service, so the number is ours to choose. The port belongs to the site address — there
+# is no global option for it, and `caddy run` does not explain that it met one: it exits 1 after
+# logging "using config from file" and says nothing more. `caddy validate` names the line.
 :8080 {
 	root * /srv
 
@@ -32,9 +32,18 @@
 	@index path / /index.html
 	header @index Cache-Control "no-cache"
 
-	# Deep links. A reload on /todos/1 asks the server for a file that does not exist, and without
-	# this line the answer is a 404 from Caddy instead of the SPA that would render the page.
-	try_files {http.request.uri.path} /index.html
+	# Deep links, with two exclusions that are the whole point. A reload on /todos/1 asks the server
+	# for a file that does not exist; without a fallback the answer is Caddy's 404 instead of the SPA
+	# that would render the page. But a hashed chunk under /assets/ that is missing is a stale deploy,
+	# and a real file at any other path (favicon.ico, robots.txt) is a real file — serving index.html
+	# for either is how a 404 becomes a syntax error in the browser. So: fall back only where the path
+	# is not an asset and no file exists there. (`try_files` with a matcher reads as the shorter way to
+	# say this and silently rewrites anyway; `rewrite` with a matcher is the form that means it.)
+	@spa {
+		not path /assets/*
+		not file {http.request.uri.path}
+	}
+	rewrite @spa /index.html
 
 	file_server
 
